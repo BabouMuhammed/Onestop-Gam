@@ -1,0 +1,24 @@
+{
+  "name": "onestop-gam",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Inventory, sales, contract and finance system for Onestopgam Inc (Quality Foods and Le Gaye Bi Group)",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev -w @onestop/api",
+    "dev:web": "npm run dev -w @onestop/web",
+    "build": "npm run build -w @onestop/api && npm run build -w @onestop/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test -w @onestop/api",
+    "db:generate": "npm run db:generate -w @onestop/api",
+    "db:migrate": "npm run db:migrate -w @onestop/api",
+    "db:seed": "npm run db:seed -w @onestop/api",
+    "import:opening-stock": "npm run import:opening-stock -w @onestop/api --"
+  }
+}

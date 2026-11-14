@@ -1,0 +1,16 @@
+# Local development database only. Do not use these credentials anywhere else.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: onestop
+      POSTGRES_PASSWORD: onestop
+      POSTGRES_DB: onestop_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - onestop_pg:/var/lib/postgresql/data
+      - ./tools/create-test-db.sql:/docker-entrypoint-initdb.d/create-test-db.sql:ro
+
+volumes:
+  onestop_pg:
