@@ -15,6 +15,8 @@ interface StockChange {
   userId: string | null
   /** When the movement happened, if not now. Only the opening stock import sets this, to the count date. */
   occurredAt?: Date
+  /** The stock receipt this movement belongs to, for receipts and their reversals. */
+  receiptId?: string
 }
 
 export interface StockResult {
@@ -69,6 +71,7 @@ export async function changeStock(tx: Tx, input: StockChange): Promise<StockResu
       note: input.note ?? null,
       userId: input.userId,
       createdAt: input.occurredAt,
+      receiptId: input.receiptId,
     },
   })
   return { before, after, delta, moved: true }

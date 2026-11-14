@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ClipboardCheck, KeyRound, LayoutDashboard, LogOut, Menu, Package, ScrollText, Users, Warehouse, X, type LucideIcon } from 'lucide-react'
+import { ClipboardCheck, KeyRound, LayoutDashboard, LogOut, Menu, Package, PackagePlus, ScrollText, Truck, Users, Warehouse, X, type LucideIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { ROLE_LABELS, type Permission } from '@onestop/shared'
@@ -20,7 +20,9 @@ function useNavigation(): { main: NavItem[]; admin: NavItem[] } {
   const main: NavItem[] = [
     { to: '/overview', label: user.role === 'MANAGER' ? 'Dashboard' : 'Overview', icon: LayoutDashboard, permission: 'overview.view' },
     { to: '/inventory', label: user.role === 'CASHIER' ? 'Product lookup' : 'Inventory', icon: Package, permission: 'inventory.view' },
+    { to: '/receiving', label: 'Receiving', icon: PackagePlus, permission: 'receipt.view' },
     { to: '/stock-count', label: 'Stock count', icon: ClipboardCheck, permission: 'stock.count' },
+    { to: '/suppliers', label: 'Suppliers', icon: Truck, permission: 'supplier.view' },
     { to: '/locations', label: 'Locations', icon: Warehouse, permission: 'location.manage' },
   ]
   const admin: NavItem[] = [

@@ -10,7 +10,9 @@ import { authRouter } from './routes/auth'
 import { locationsRouter } from './routes/locations'
 import { overviewRouter } from './routes/overview'
 import { productsRouter } from './routes/products'
+import { receiptsRouter } from './routes/receipts'
 import { stockRouter } from './routes/stock'
+import { suppliersRouter } from './routes/suppliers'
 import { usersRouter } from './routes/users'
 
 export function createApp() {
@@ -35,6 +37,8 @@ export function createApp() {
   api.use('/locations', locationsRouter)
   api.use('/products', productsRouter)
   api.use('/stock', stockRouter)
+  api.use('/suppliers', suppliersRouter)
+  api.use('/receipts', receiptsRouter)
   api.use('/users', usersRouter)
   api.use('/audit', auditRouter)
   app.use('/api', api)

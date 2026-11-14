@@ -129,3 +129,58 @@ export const productListQuerySchema = listQuerySchema.extend({
   dir: z.enum(['asc', 'desc']).default('asc'),
 })
 export type ProductListQuery = z.infer<typeof productListQuerySchema>
+
+const optionalText = (max: number) => z.string().trim().max(max, `At most ${max} characters`).optional()
+
+/** A calendar date sent as YYYY-MM-DD. */
+export const dateText = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Choose a date')
+  .refine((v) => !Number.isNaN(Date.parse(`${v}T00:00:00Z`)), 'Choose a real date')
+
+/** Today as YYYY-MM-DD. The Gambia is on UTC all year, so UTC is the local date. */
+export const todayText = () => new Date().toISOString().slice(0, 10)
+
+export const supplierSchema = z.object({
+  name: trimmed(100),
+  contactName: optionalText(80),
+  phone: optionalText(40),
+  address: optionalText(200),
+  notes: optionalText(500),
+})
+export type SupplierInput = z.infer<typeof supplierSchema>
+export const supplierUpdateSchema = supplierSchema.partial().extend({ isActive: z.boolean().optional() })
+
+export const receiptLineSchema = z.object({
+  productId: z.string().uuid('Choose a product'),
+  locationId: z.string().uuid('Choose a location'),
+  quantity: quantityText.refine((q) => Number(q) > 0, 'Enter a quantity above zero'),
+  /** Cost of one counted unit, in dalasi. Zero is allowed for free samples. */
+  unitCost: moneyText,
+  batchNumber: optionalText(40),
+  expiryDate: dateText.optional(),
+})
+export type ReceiptLineInput = z.infer<typeof receiptLineSchema>
+
+/**
+ * Stock received from a supplier. Totals are not part of the request: the server
+ * computes every line cost and the receipt total from quantity and unit cost.
+ */
+export const receiptSchema = z.object({
+  supplierId: z.string().uuid('Choose a supplier'),
+  receivedOn: dateText.refine((v) => v <= todayText(), 'The date cannot be in the future'),
+  reference: optionalText(60),
+  note: optionalText(300),
+  lines: z.array(receiptLineSchema).min(1, 'Add at least one item').max(200, 'At most 200 lines on one receipt'),
+  idempotencyKey,
+})
+export type ReceiptInput = z.infer<typeof receiptSchema>
+
+export const receiptReverseSchema = z.object({ reason: trimmed(300), idempotencyKey })
+export type ReceiptReverseInput = z.infer<typeof receiptReverseSchema>
+
+export const receiptListQuerySchema = listQuerySchema.extend({
+  supplierId: z.string().uuid().optional(),
+  status: z.enum(['all', 'posted', 'reversed']).default('all'),
+})
+export type ReceiptListQuery = z.infer<typeof receiptListQuerySchema>

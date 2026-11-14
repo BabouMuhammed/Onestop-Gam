@@ -2,7 +2,7 @@
 
 One system for Onestopgam Inc's two divisions, **Quality Foods** and **Le Gaye Bi Group**: inventory, and later sales, contracts and finance. Each division keeps its own records; the CEO and Finance see both.
 
-## What works today (Phase 1)
+## What works today (Phases 1 and 2)
 
 - **Sign-in and roles.** CEO, Finance, Manager and Cashier, each limited to what the role may do. Managers and cashiers are confined to their own division.
 - **Inventory.** Products, storage locations, and the quantity of each product at each location.
@@ -10,11 +10,12 @@ One system for Onestopgam Inc's two divisions, **Quality Foods** and **Le Gaye B
 - **Stock count.** A count sheet per location, like the Excel sheets it replaces. Posting a count corrects the system figures.
 - **Stock adjustments.** Add or remove stock with a required reason.
 - **Packs and sizes.** A product can record how many pieces are in each pack or box, and a size such as 1", DN 100 or 50mm.
+- **Suppliers and receiving.** Record each delivery: supplier, date, the supplier's invoice number, and one line per item with where it was put, how many arrived and what each cost. Posting adds the stock and sets the item's cost price. A posted receipt is never edited; a mistake is reversed, which takes the stock back out and keeps both records.
 - **Prices.** Products can exist without a selling price; managers set prices, and every change is logged.
 - **Users and audit log.** The CEO manages accounts; CEO and Finance can read the audit log.
 - **Opening stock import.** Loads a converted stock-count workbook as a division's starting stock.
 
-Not built yet: stock receiving, sales and POS, customers and suppliers, contracts, deliveries, damages, finance, reports. See [docs/ROADMAP.md](docs/ROADMAP.md).
+Not built yet: sales and POS, customers, contracts, deliveries, damages, finance, reports. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Run it locally
 

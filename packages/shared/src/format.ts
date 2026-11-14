@@ -24,6 +24,9 @@ const time = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digi
 
 /** One date format everywhere: "14/11/2026". */
 export function formatDate(value: string | Date): string {
+  // A calendar date (YYYY-MM-DD) has no time zone; print it as written.
+  const dateOnly = typeof value === 'string' ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(value) : null
+  if (dateOnly) return `${dateOnly[3]}/${dateOnly[2]}/${dateOnly[1]}`
   return date.format(new Date(value))
 }
 

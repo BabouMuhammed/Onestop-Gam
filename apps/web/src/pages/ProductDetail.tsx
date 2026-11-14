@@ -101,6 +101,9 @@ export function ProductDetailPage() {
           <dl className="divide-y divide-line rounded-lg border border-line bg-surface">
             {[
               ['Selling price', product.sellingPrice === null ? <Flag tone="warn">No price</Flag> : formatGMD(product.sellingPrice)],
+              ...(can('cost.view')
+                ? [['Cost price', product.costPrice ? formatGMD(product.costPrice) : <Flag tone="muted">Not received yet</Flag>] as const]
+                : []),
               ['Counted in', product.packSize ? `${UNIT_NAMES[unit]} of ${product.packSize} pieces` : UNIT_NAMES[unit]],
               ...(product.size ? [['Size', product.size] as const] : []),
               ['Expiry date', product.tracksExpiry ? 'Tracked' : 'Not tracked'],

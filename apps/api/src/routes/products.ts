@@ -1,11 +1,17 @@
 import { Router } from 'express'
-import { formatGMD, priceSchema, productListQuerySchema, productSchema, productUpdateSchema } from '@onestop/shared'
+import { can, formatGMD, priceSchema, productListQuerySchema, productSchema, productUpdateSchema } from '@onestop/shared'
 import { audit } from '../audit'
 import { authOf, divisionOf, requirePermission } from '../auth/guards'
 import { Decimal, Prisma, prisma, type Tx } from '../db'
+import type { Request } from 'express'
 import { conflict, idParam, notFound, parse } from '../http'
 
 export const productsRouter = Router()
+
+/** Cost prices are for managers, Finance and the CEO. Everyone else gets the record without it. */
+function forViewer<T extends { costPrice?: unknown }>(req: Request, product: T): T {
+  return can(authOf(req).user.role, 'cost.view') ? product : { ...product, costPrice: undefined }
+}
 
 const SORT_COLUMNS = {
   name: Prisma.sql`p."name"`,
@@ -22,6 +28,8 @@ interface ProductRow {
   name: string
   unit: string
   sellingPrice: Prisma.Decimal | null
+  costPrice: Prisma.Decimal | null
+  tracksExpiry: boolean
   isActive: boolean
   quantity: Prisma.Decimal
   locationCount: number
@@ -46,7 +54,7 @@ productsRouter.get('/', requirePermission('inventory.view'), async (req, res) =>
   const having = q.filter === 'out_of_stock' ? Prisma.sql`HAVING COALESCE(SUM(sl."quantity"), 0) = 0` : Prisma.empty
 
   const base = Prisma.sql`
-    SELECT p."id", p."sku", p."name", p."unit", p."sellingPrice", p."isActive",
+    SELECT p."id", p."sku", p."name", p."unit", p."sellingPrice", p."costPrice", p."tracksExpiry", p."isActive",
       COALESCE(SUM(sl."quantity"), 0) AS "quantity",
       (COUNT(sl."id") FILTER (WHERE sl."quantity" > 0))::int AS "locationCount"
     FROM "Product" p ${join}
@@ -61,7 +69,7 @@ productsRouter.get('/', requirePermission('inventory.view'), async (req, res) =>
       LIMIT ${q.pageSize} OFFSET ${(q.page - 1) * q.pageSize}`,
     prisma.$queryRaw<{ total: number }[]>`SELECT COUNT(*)::int AS "total" FROM (${base}) counted`,
   ])
-  res.json({ rows, total: totals[0]?.total ?? 0, page: q.page, pageSize: q.pageSize })
+  res.json({ rows: rows.map((row) => forViewer(req, row)), total: totals[0]?.total ?? 0, page: q.page, pageSize: q.pageSize })
 })
 
 productsRouter.get('/:id', requirePermission('inventory.view'), async (req, res) => {
@@ -93,7 +101,7 @@ productsRouter.get('/:id', requirePermission('inventory.view'), async (req, res)
 
   const total = levels.reduce((sum, l) => sum.plus(l.quantity), new Decimal(0))
   res.json({
-    product,
+    product: forViewer(req, product),
     total,
     levels: levels.map((l) => ({ locationId: l.location.id, location: l.location.name, type: l.location.type, quantity: l.quantity })),
     movements: movements.map(({ userId, location, ...m }) => ({ ...m, location: location.name, by: nameOf(userId) })),
@@ -145,7 +153,7 @@ productsRouter.post('/', requirePermission('product.manage'), async (req, res) =
     })
     return created
   })
-  res.status(201).json({ product })
+  res.status(201).json({ product: forViewer(req, product) })
 })
 
 productsRouter.patch('/:id', requirePermission('product.manage'), async (req, res) => {
@@ -179,7 +187,7 @@ productsRouter.patch('/:id', requirePermission('product.manage'), async (req, re
     })
     return updated
   })
-  res.json({ product })
+  res.json({ product: forViewer(req, product) })
 })
 
 productsRouter.put('/:id/price', requirePermission('price.set'), async (req, res) => {
@@ -207,5 +215,5 @@ productsRouter.put('/:id/price', requirePermission('price.set'), async (req, res
     })
     return updated
   })
-  res.json({ product })
+  res.json({ product: forViewer(req, product) })
 })

@@ -23,6 +23,13 @@ const PERMISSION_TABLE = {
   'stock.adjust': ['CEO', 'MANAGER'],
   'stock.count': ['CEO', 'MANAGER'],
   'location.manage': ['CEO', 'MANAGER'],
+  // Cost prices and what was paid to suppliers are kept from cashiers.
+  'cost.view': ['CEO', 'FINANCE', 'MANAGER'],
+  'supplier.view': ['CEO', 'FINANCE', 'MANAGER'],
+  'supplier.manage': ['CEO', 'MANAGER'],
+  'receipt.view': ['CEO', 'FINANCE', 'MANAGER'],
+  'stock.receive': ['CEO', 'MANAGER'],
+  'receipt.reverse': ['CEO', 'MANAGER'],
   'user.manage': ['CEO'],
   'audit.view': ['CEO', 'FINANCE'],
 } as const satisfies Record<string, readonly Role[]>
@@ -71,11 +78,13 @@ export const LOCATION_TYPE_LABELS: Record<LocationType, string> = {
   OTHER: 'Other',
 }
 
-export const MOVEMENT_TYPES = ['OPENING', 'ADJUSTMENT', 'COUNT'] as const
+export const MOVEMENT_TYPES = ['OPENING', 'ADJUSTMENT', 'COUNT', 'RECEIPT', 'RECEIPT_REVERSAL'] as const
 export type MovementType = (typeof MOVEMENT_TYPES)[number]
 
 export const MOVEMENT_TYPE_LABELS: Record<MovementType, string> = {
   OPENING: 'Opening stock',
   ADJUSTMENT: 'Adjustment',
   COUNT: 'Stock count',
+  RECEIPT: 'Received',
+  RECEIPT_REVERSAL: 'Receipt reversed',
 }
