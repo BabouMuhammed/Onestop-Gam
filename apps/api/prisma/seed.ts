@@ -1,6 +1,7 @@
 /**
  * Creates the two divisions and the first administrator.
- * Safe to run more than once: existing records are left alone.
+ * Safe to run more than once: an existing administrator is left alone, and a division's
+ * display name is brought in line with the list below (its id, code and history are kept).
  * There is no default password. Set SEED_ADMIN_* in .env first.
  */
 import { PASSWORD_MIN_LENGTH } from '@onestop/shared'
@@ -14,7 +15,7 @@ const DIVISIONS = [
 
 async function main() {
   for (const division of DIVISIONS) {
-    await prisma.division.upsert({ where: { code: division.code }, update: {}, create: division })
+    await prisma.division.upsert({ where: { code: division.code }, update: { name: division.name }, create: division })
   }
   console.log(`Divisions ready: ${DIVISIONS.map((d) => d.name).join(', ')}`)
 

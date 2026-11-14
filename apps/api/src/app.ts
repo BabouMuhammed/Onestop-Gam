@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import express from 'express'
@@ -20,6 +22,7 @@ import { usersRouter } from './routes/users'
 export function createApp() {
   const app = express()
   app.disable('x-powered-by')
+  if (env.TRUST_PROXY) app.set('trust proxy', env.TRUST_PROXY)
   app.use(helmet())
   // Only our own web app may call the API from a browser.
   app.use(cors({ origin: env.WEB_ORIGIN, credentials: true, allowedHeaders: ['content-type', 'x-onestop-request', 'x-division-id'] }))
@@ -46,6 +49,18 @@ export function createApp() {
   api.use('/users', usersRouter)
   api.use('/audit', auditRouter)
   app.use('/api', api)
+  app.use('/api', unknownRoute)
+
+  // Single-service hosting: serve the built web app and let its router handle every other path.
+  const webDist = env.WEB_DIST ? resolve(env.WEB_DIST) : null
+  if (webDist && existsSync(join(webDist, 'index.html'))) {
+    // Built assets carry a content hash in their names, so they can be cached for a long time.
+    app.use('/assets', express.static(join(webDist, 'assets'), { immutable: true, maxAge: '365d' }), unknownRoute)
+    app.use(express.static(webDist, { index: false }))
+    app.get(/.*/, (_req, res) => {
+      res.set('cache-control', 'no-cache').sendFile(join(webDist, 'index.html'))
+    })
+  }
 
   app.use(unknownRoute)
   app.use(errorHandler)
