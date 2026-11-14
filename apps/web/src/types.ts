@@ -25,6 +25,9 @@ export interface ProductRow {
   name: string
   unit: Unit
   sellingPrice: string | null
+  /** Absent for roles that may not see costs. */
+  costPrice?: string | null
+  tracksExpiry: boolean
   isActive: boolean
   quantity: string
   locationCount: number
@@ -38,6 +41,8 @@ export interface Product {
   packSize: number | null
   size: string | null
   sellingPrice: string | null
+  /** Absent for roles that may not see costs. */
+  costPrice?: string | null
   tracksExpiry: boolean
   notes: string | null
   isActive: boolean
@@ -112,4 +117,51 @@ export interface AuditRow {
   divisionId: string | null
   action: string
   summary: string
+}
+
+export interface SupplierRow {
+  id: string
+  name: string
+  contactName: string | null
+  phone: string | null
+  address: string | null
+  notes: string | null
+  isActive: boolean
+  receiptCount: number
+  lastReceivedOn: string | null
+}
+
+export interface ReceiptRow {
+  id: string
+  number: string
+  receivedOn: string
+  reference: string | null
+  totalCost: string
+  supplier: { id: string; name: string }
+  lineCount: number
+  reversedAt: string | null
+  by: string | null
+}
+
+export interface ReceiptDetail {
+  id: string
+  number: string
+  receivedOn: string
+  reference: string | null
+  note: string | null
+  totalCost: string
+  createdAt: string
+  by: string | null
+  supplier: { id: string; name: string }
+  reversal: { reason: string; createdAt: string; by: string | null } | null
+  lines: {
+    id: string
+    product: { id: string; sku: string; name: string; unit: Unit }
+    location: { id: string; name: string }
+    quantity: string
+    unitCost: string
+    lineCost: string
+    batchNumber: string | null
+    expiryDate: string | null
+  }[]
 }

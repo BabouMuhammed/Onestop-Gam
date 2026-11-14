@@ -9,7 +9,11 @@ import { LocationsPage } from './pages/Locations'
 import { LoginPage } from './pages/Login'
 import { OverviewPage } from './pages/Overview'
 import { ProductDetailPage } from './pages/ProductDetail'
+import { ReceiptDetailPage } from './pages/ReceiptDetail'
+import { ReceiptNewPage } from './pages/ReceiptNew'
+import { ReceiptsPage } from './pages/Receipts'
 import { StockCountPage } from './pages/StockCount'
+import { SuppliersPage } from './pages/Suppliers'
 import { UsersPage } from './pages/Users'
 import { SessionProvider, useMe, useSession } from './session'
 import { Alert, Button, EmptyState, Loading } from './ui'
@@ -51,6 +55,10 @@ export function App() {
           <Route path="inventory" element={<Require permission="inventory.view"><InventoryPage /></Require>} />
           <Route path="inventory/:id" element={<Require permission="inventory.view"><ProductDetailPage /></Require>} />
           <Route path="stock-count" element={<Require permission="stock.count"><StockCountPage /></Require>} />
+          <Route path="receiving" element={<Require permission="receipt.view"><ReceiptsPage /></Require>} />
+          <Route path="receiving/new" element={<Require permission="stock.receive"><ReceiptNewPage /></Require>} />
+          <Route path="receiving/:id" element={<Require permission="receipt.view"><ReceiptDetailPage /></Require>} />
+          <Route path="suppliers" element={<Require permission="supplier.view"><SuppliersPage /></Require>} />
           <Route path="locations" element={<Require permission="location.manage"><LocationsPage /></Require>} />
           <Route path="admin/users" element={<Require permission="user.manage"><UsersPage /></Require>} />
           <Route path="admin/audit" element={<Require permission="audit.view"><AuditLogPage /></Require>} />

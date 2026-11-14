@@ -1,4 +1,4 @@
-import { useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
+import { useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes, type ComponentProps } from 'react'
 import { cn } from './cn'
 
 const control =
@@ -37,7 +37,7 @@ export function Field({ label, error, hint, className, children }: FieldProps) {
   )
 }
 
-export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
+export function Input({ className, ...rest }: ComponentProps<'input'>) {
   return <input className={cn(control, 'h-control [@media(pointer:coarse)]:h-10', className)} {...rest} />
 }
 

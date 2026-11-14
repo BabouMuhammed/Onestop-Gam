@@ -40,6 +40,8 @@ enum MovementType {
   OPENING
   ADJUSTMENT
   COUNT
+  RECEIPT
+  RECEIPT_REVERSAL
 }
 
 /// A business division. Display names live here and nowhere else.
@@ -49,12 +51,15 @@ model Division {
   name          String
   skuPrefix     String
   nextSkuNumber Int      @default(1)
+  nextReceiptNumber Int  @default(1)
   createdAt     DateTime @default(now())
 
   users     User[]
   locations Location[]
   products  Product[]
   movements StockMovement[]
+  suppliers Supplier[]
+  receipts  StockReceipt[]
 }
 
 model User {
@@ -104,6 +109,7 @@ model Location {
   division  Division        @relation(fields: [divisionId], references: [id])
   levels    StockLevel[]
   movements StockMovement[]
+  receiptLines StockReceiptLine[]
 
   @@unique([divisionId, name])
 }
@@ -120,6 +126,8 @@ model Product {
   size         String?
   /// Null until a manager sets a price. A product without a price cannot be sold.
   sellingPrice Decimal? @db.Decimal(12, 2)
+  /// Unit cost on the most recent receipt that has not been reversed. Null until stock is received.
+  costPrice    Decimal? @db.Decimal(12, 2)
   tracksExpiry Boolean  @default(false)
   notes        String?
   isActive     Boolean  @default(true)
@@ -130,6 +138,7 @@ model Product {
   levels       StockLevel[]
   movements    StockMovement[]
   priceChanges PriceChange[]
+  receiptLines StockReceiptLine[]
 
   @@unique([divisionId, sku])
   @@unique([divisionId, name])
@@ -162,14 +171,94 @@ model StockMovement {
   balanceAfter  Decimal      @db.Decimal(14, 3)
   note          String?
   userId        String?
+  /// Set on movements written by a stock receipt or its reversal.
+  receiptId     String?
   createdAt     DateTime     @default(now())
 
-  division Division @relation(fields: [divisionId], references: [id])
-  product  Product  @relation(fields: [productId], references: [id])
-  location Location @relation(fields: [locationId], references: [id])
+  division Division      @relation(fields: [divisionId], references: [id])
+  product  Product       @relation(fields: [productId], references: [id])
+  location Location      @relation(fields: [locationId], references: [id])
+  receipt  StockReceipt? @relation(fields: [receiptId], references: [id])
 
   @@index([productId, createdAt])
   @@index([divisionId, createdAt])
+}
+
+model Supplier {
+  id          String   @id @default(uuid())
+  divisionId  String
+  name        String
+  contactName String?
+  phone       String?
+  address     String?
+  notes       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  division Division       @relation(fields: [divisionId], references: [id])
+  receipts StockReceipt[]
+
+  @@unique([divisionId, name])
+}
+
+/// Stock received from a supplier. Posted receipts are never edited or deleted, only
+/// reversed; a database trigger rejects UPDATE and DELETE.
+model StockReceipt {
+  id         String   @id @default(uuid())
+  divisionId String
+  /// Goods received number, e.g. QF-GRN-00012.
+  number     String
+  supplierId String
+  receivedOn DateTime @db.Date
+  /// The supplier's invoice or delivery note number.
+  reference  String?
+  note       String?
+  /// Sum of the line costs, computed by the server.
+  totalCost  Decimal  @db.Decimal(14, 2)
+  userId     String
+  createdAt  DateTime @default(now())
+
+  division  Division              @relation(fields: [divisionId], references: [id])
+  supplier  Supplier              @relation(fields: [supplierId], references: [id])
+  lines     StockReceiptLine[]
+  reversal  StockReceiptReversal?
+  movements StockMovement[]
+
+  @@unique([divisionId, number])
+  @@index([divisionId, receivedOn])
+  @@index([supplierId])
+}
+
+model StockReceiptLine {
+  id          String    @id @default(uuid())
+  receiptId   String
+  position    Int
+  productId   String
+  locationId  String
+  quantity    Decimal   @db.Decimal(14, 3)
+  unitCost    Decimal   @db.Decimal(12, 2)
+  lineCost    Decimal   @db.Decimal(14, 2)
+  batchNumber String?
+  expiryDate  DateTime? @db.Date
+
+  receipt  StockReceipt @relation(fields: [receiptId], references: [id])
+  product  Product      @relation(fields: [productId], references: [id])
+  location Location     @relation(fields: [locationId], references: [id])
+
+  @@index([receiptId])
+  @@index([productId])
+}
+
+/// One per reversed receipt. The unique receiptId makes a second reversal impossible.
+model StockReceiptReversal {
+  id        String   @id @default(uuid())
+  receiptId String   @unique
+  reason    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  receipt StockReceipt @relation(fields: [receiptId], references: [id])
 }
 
 model PriceChange {
