@@ -70,7 +70,7 @@ apps/api          Express + Prisma + PostgreSQL
 apps/web          React + Vite + Tailwind
 packages/shared   Roles, permissions, request schemas and formats used by both
 tools             Workbook converter, database backup script
-docs              Security, backup and restore, design system, roadmap
+docs              Security, backup and restore, hosting a demo, design system, roadmap
 ```
 
 ## Things to know
