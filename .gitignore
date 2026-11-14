@@ -1,0 +1,18 @@
+node_modules/
+dist/
+coverage/
+*.log
+.DS_Store
+
+# Secrets: never commit real environment files
+.env
+.env.*
+!.env.example
+
+# Generated Prisma client
+apps/api/src/generated/
+
+# Real business data (stock counts, price lists). Keep it out of the repository.
+data/opening-stock/*.json
+!data/opening-stock/sample.json
+*.xlsx
