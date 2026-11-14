@@ -98,3 +98,31 @@
   text-align: right;
   white-space: nowrap;
 }
+
+/* Printing a receipt: only the element marked .print-area reaches the paper,
+   sized for a 80mm receipt printer and still legible on A4. */
+@media print {
+  @page {
+    margin: 6mm;
+  }
+  html,
+  body {
+    background: #fff;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 72mm;
+    border: 0;
+    padding: 0;
+    color: #000;
+  }
+}

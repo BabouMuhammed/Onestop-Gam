@@ -104,6 +104,7 @@ export function ProductDetailPage() {
               ...(can('cost.view')
                 ? [['Cost price', product.costPrice ? formatGMD(product.costPrice) : <Flag tone="muted">Not received yet</Flag>] as const]
                 : []),
+              ...(product.barcode ? [['Barcode', product.barcode] as const] : []),
               ['Counted in', product.packSize ? `${UNIT_NAMES[unit]} of ${product.packSize} pieces` : UNIT_NAMES[unit]],
               ...(product.size ? [['Size', product.size] as const] : []),
               ['Expiry date', product.tracksExpiry ? 'Tracked' : 'Not tracked'],

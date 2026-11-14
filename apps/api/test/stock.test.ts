@@ -175,6 +175,21 @@ describe('products and prices', () => {
     expect((await manager.post('/api/products').send({ ...base, name: 'HALF PACK', packSize: 2.5 })).status).toBe(400)
   })
 
+  it('finds a product by its scanned barcode, and keeps barcodes unique in a division', async () => {
+    const manager = await signIn('qf.manager')
+    const base = { unit: 'PIECE', tracksExpiry: false }
+    const made = await manager.post('/api/products').send({ ...base, name: 'OVALTINE 400G TIN', barcode: '5000127162631' })
+    expect(made.body.product.barcode).toBe('5000127162631')
+    const found = await manager.get('/api/products?search=5000127162631')
+    expect(found.body.rows.map((r: { name: string }) => r.name)).toEqual(['OVALTINE 400G TIN'])
+    const clash = await manager.post('/api/products').send({ ...base, name: 'SOMETHING ELSE', barcode: '5000127162631' })
+    expect(clash.status).toBe(409)
+    expect(clash.body.error.fields.barcode).toContain('OVALTINE 400G TIN')
+    expect((await manager.post('/api/products').send({ ...base, name: 'BAD CODE', barcode: 'has spaces' })).status).toBe(400)
+    // The other division may use the same code.
+    expect((await (await signIn('lgb.manager')).post('/api/products').send({ ...base, name: 'SAME CODE', barcode: '5000127162631' })).status).toBe(201)
+  })
+
   it('searches, filters by location and sorts', async () => {
     const manager = await signIn('qf.manager')
     await manager.post('/api/stock/adjustments').send(adjustment(world, 'IN', '4'))

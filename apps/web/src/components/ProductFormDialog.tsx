@@ -33,8 +33,8 @@ function ProductForm({ onClose, product, onSaved }: Omit<Props, 'open'>) {
   const form = useForm<ProductInput>({
     resolver: zodResolver(productSchema),
     defaultValues: product
-      ? { name: product.name, unit: product.unit, packSize: product.packSize, size: product.size ?? '', tracksExpiry: product.tracksExpiry, notes: product.notes ?? '' }
-      : { name: '', unit: 'PIECE', packSize: null, size: '', tracksExpiry: false, notes: '', sellingPrice: undefined },
+      ? { name: product.name, barcode: product.barcode ?? '', unit: product.unit, packSize: product.packSize, size: product.size ?? '', tracksExpiry: product.tracksExpiry, notes: product.notes ?? '' }
+      : { name: '', barcode: '', unit: 'PIECE', packSize: null, size: '', tracksExpiry: false, notes: '', sellingPrice: undefined },
   })
   const { errors } = form.formState
 
@@ -50,7 +50,7 @@ function ProductForm({ onClose, product, onSaved }: Omit<Props, 'open'>) {
       onClose()
       onSaved?.(saved)
     },
-    onError: (error) => setFailure(showFieldErrors(error, form.setError, ['name', 'unit', 'packSize', 'size', 'notes', 'sellingPrice']) ? null : error),
+    onError: (error) => setFailure(showFieldErrors(error, form.setError, ['name', 'barcode', 'unit', 'packSize', 'size', 'notes', 'sellingPrice']) ? null : error),
   })
 
   return (
@@ -65,6 +65,9 @@ function ProductForm({ onClose, product, onSaved }: Omit<Props, 'open'>) {
       <ErrorAlert error={failure} />
       <Field label="Product name" error={errors.name?.message}>
         {(a) => <Input {...a} autoFocus {...form.register('name')} />}
+      </Field>
+      <Field label="Barcode" hint="Optional. Click here and scan the pack, or type the code." error={errors.barcode?.message}>
+        {(a) => <Input {...a} autoComplete="off" {...form.register('barcode')} onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }} />}
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Sold and counted in" error={errors.unit?.message}>

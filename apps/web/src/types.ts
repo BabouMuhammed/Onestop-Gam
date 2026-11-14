@@ -1,4 +1,4 @@
-import type { LocationType, MovementType, Permission, Role, Unit } from '@onestop/shared'
+import type { LocationType, MovementType, PaymentMethod, Permission, Role, Unit } from '@onestop/shared'
 
 export interface Division {
   id: string
@@ -38,6 +38,7 @@ export interface Product {
   sku: string
   name: string
   unit: Unit
+  barcode: string | null
   packSize: number | null
   size: string | null
   sellingPrice: string | null
@@ -164,4 +165,64 @@ export interface ReceiptDetail {
     batchNumber: string | null
     expiryDate: string | null
   }[]
+}
+
+export interface CustomerRow {
+  id: string
+  name: string
+  phone: string | null
+  address: string | null
+  notes: string | null
+  creditAllowed: boolean
+  isActive: boolean
+  saleCount: number
+  balance: string
+}
+
+export interface SaleRow {
+  id: string
+  number: string
+  createdAt: string
+  total: string
+  paid: string
+  balance: string
+  voidedAt: string | null
+  lineCount: number
+  customer: { id: string; name: string } | null
+  by: string | null
+}
+
+export interface SaleDetail {
+  id: string
+  number: string
+  createdAt: string
+  note: string | null
+  total: string
+  paid: string
+  balance: string
+  cashTendered: string | null
+  changeGiven: string
+  by: string | null
+  soldByMe: boolean
+  customer: { id: string; name: string; phone: string | null } | null
+  void: { reason: string; createdAt: string; by: string | null } | null
+  lines: {
+    id: string
+    product: { id: string; sku: string; name: string; unit: Unit }
+    quantity: string
+    unitPrice: string
+    lineTotal: string
+    /** Absent for roles that may not see costs. */
+    unitCost?: string | null
+  }[]
+  payments: { id: string; method: PaymentMethod; amount: string; reference: string | null; createdAt: string; by: string | null }[]
+}
+
+export interface SaleResult {
+  id: string
+  number: string
+  total: string
+  paid: string
+  change: string
+  balance: string
 }

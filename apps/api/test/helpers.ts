@@ -12,7 +12,7 @@ export async function resetDatabase() {
   const name = new URL(env.DATABASE_URL).pathname.slice(1)
   if (!name.endsWith('_test')) throw new Error(`Refusing to wipe "${name}": tests only run against a database ending in _test`)
   await prisma.$executeRawUnsafe(
-    'TRUNCATE "AuditLog", "IdempotencyKey", "PriceChange", "StockReceiptReversal", "StockReceiptLine", "StockMovement", "StockReceipt", "Supplier", "StockLevel", "Product", "Location", "Session", "User", "Division" CASCADE',
+    'TRUNCATE "AuditLog", "IdempotencyKey", "PriceChange", "Payment", "SaleVoid", "SaleLine", "StockReceiptReversal", "StockReceiptLine", "StockMovement", "Sale", "Customer", "StockReceipt", "Supplier", "StockLevel", "Product", "Location", "Session", "User", "Division" CASCADE',
   )
 }
 
@@ -37,6 +37,8 @@ export async function seedWorld(): Promise<World> {
       user('finance', 'FINANCE', null),
       user('qf.manager', 'MANAGER', qf.id),
       user('qf.cashier', 'CASHIER', qf.id),
+      user('qf.cashier2', 'CASHIER', qf.id),
+      user('qf.manager2', 'MANAGER', qf.id),
       user('lgb.manager', 'MANAGER', lgb.id),
     ],
   })

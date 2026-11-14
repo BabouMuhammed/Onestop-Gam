@@ -42,6 +42,15 @@ enum MovementType {
   COUNT
   RECEIPT
   RECEIPT_REVERSAL
+  SALE
+  SALE_VOID
+}
+
+enum PaymentMethod {
+  CASH
+  MOBILE_MONEY
+  BANK_TRANSFER
+  CHEQUE
 }
 
 /// A business division. Display names live here and nowhere else.
@@ -52,6 +61,7 @@ model Division {
   skuPrefix     String
   nextSkuNumber Int      @default(1)
   nextReceiptNumber Int  @default(1)
+  nextSaleNumber Int     @default(1)
   createdAt     DateTime @default(now())
 
   users     User[]
@@ -60,6 +70,9 @@ model Division {
   movements StockMovement[]
   suppliers Supplier[]
   receipts  StockReceipt[]
+  customers Customer[]
+  sales     Sale[]
+  payments  Payment[]
 }
 
 model User {
@@ -119,6 +132,8 @@ model Product {
   divisionId   String
   sku          String
   name         String
+  /// The code printed on the pack, read by a scanner at the till.
+  barcode      String?
   unit         Unit     @default(PIECE)
   /// Pieces inside one counted unit, e.g. 50 for a pack of 50. Null when counted singly.
   packSize     Int?
@@ -139,9 +154,11 @@ model Product {
   movements    StockMovement[]
   priceChanges PriceChange[]
   receiptLines StockReceiptLine[]
+  saleLines    SaleLine[]
 
   @@unique([divisionId, sku])
   @@unique([divisionId, name])
+  @@unique([divisionId, barcode])
 }
 
 /// Quantity of one product at one location. A database CHECK keeps it at zero or above.
@@ -173,12 +190,15 @@ model StockMovement {
   userId        String?
   /// Set on movements written by a stock receipt or its reversal.
   receiptId     String?
+  /// Set on movements written by a sale or its void.
+  saleId        String?
   createdAt     DateTime     @default(now())
 
   division Division      @relation(fields: [divisionId], references: [id])
   product  Product       @relation(fields: [productId], references: [id])
   location Location      @relation(fields: [locationId], references: [id])
   receipt  StockReceipt? @relation(fields: [receiptId], references: [id])
+  sale     Sale?         @relation(fields: [saleId], references: [id])
 
   @@index([productId, createdAt])
   @@index([divisionId, createdAt])
@@ -259,6 +279,105 @@ model StockReceiptReversal {
   createdAt DateTime @default(now())
 
   receipt StockReceipt @relation(fields: [receiptId], references: [id])
+}
+
+model Customer {
+  id            String   @id @default(uuid())
+  divisionId    String
+  name          String
+  phone         String?
+  address       String?
+  notes         String?
+  /// Only a manager or the CEO can turn this on. Without it, every sale to this customer is paid in full.
+  creditAllowed Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  division Division @relation(fields: [divisionId], references: [id])
+  sales    Sale[]
+
+  @@index([divisionId, name])
+}
+
+/// A posted sale. Never edited or deleted, only voided; a database trigger rejects UPDATE and DELETE.
+model Sale {
+  id           String   @id @default(uuid())
+  divisionId   String
+  /// Receipt number, e.g. QF-S-00042.
+  number       String
+  customerId   String?
+  /// Who rang up the sale.
+  userId       String
+  /// Sum of the line totals, computed by the server from its own prices.
+  total        Decimal  @db.Decimal(14, 2)
+  /// Cash handed over, when cash was part of the payment.
+  cashTendered Decimal? @db.Decimal(14, 2)
+  changeGiven  Decimal  @default(0) @db.Decimal(14, 2)
+  note         String?
+  createdAt    DateTime @default(now())
+
+  division  Division        @relation(fields: [divisionId], references: [id])
+  customer  Customer?       @relation(fields: [customerId], references: [id])
+  lines     SaleLine[]
+  payments  Payment[]
+  void      SaleVoid?
+  movements StockMovement[]
+
+  @@unique([divisionId, number])
+  @@index([divisionId, createdAt])
+  @@index([customerId])
+  @@index([userId])
+}
+
+model SaleLine {
+  id        String   @id @default(uuid())
+  saleId    String
+  position  Int
+  productId String
+  quantity  Decimal  @db.Decimal(14, 3)
+  /// The product's selling price when the sale was posted.
+  unitPrice Decimal  @db.Decimal(12, 2)
+  lineTotal Decimal  @db.Decimal(14, 2)
+  /// The product's cost price when the sale was posted, for margin reports. Null if never received.
+  unitCost  Decimal? @db.Decimal(12, 2)
+
+  sale    Sale    @relation(fields: [saleId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([saleId])
+  @@index([productId])
+}
+
+/// One per voided sale. The unique saleId makes a second void impossible.
+model SaleVoid {
+  id        String   @id @default(uuid())
+  saleId    String   @unique
+  reason    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  sale Sale @relation(fields: [saleId], references: [id])
+}
+
+/// Money received against a sale, at the till or later. Append-only. A refund on a
+/// voided sale is a row with a negative amount.
+model Payment {
+  id         String        @id @default(uuid())
+  divisionId String
+  saleId     String
+  method     PaymentMethod
+  amount     Decimal       @db.Decimal(14, 2)
+  /// Mobile money or bank transaction reference, or cheque number.
+  reference  String?
+  userId     String
+  createdAt  DateTime      @default(now())
+
+  division Division @relation(fields: [divisionId], references: [id])
+  sale     Sale     @relation(fields: [saleId], references: [id])
+
+  @@index([saleId])
+  @@index([divisionId, createdAt])
 }
 
 model PriceChange {

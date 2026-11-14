@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { LOCATION_TYPES, ROLES, UNITS } from './permissions'
+import { LOCATION_TYPES, PAYMENT_METHODS, ROLES, UNITS } from './permissions'
 
 /**
  * Request shapes. The API validates every request against these; the web forms
@@ -52,6 +52,8 @@ export const locationUpdateSchema = locationSchema.partial().extend({ isActive: 
 export const productSchema = z.object({
   name: trimmed(120),
   unit: z.enum(UNITS),
+  /** The code printed on the pack. Letters, digits and dashes only, so a scanner's output matches exactly. */
+  barcode: z.string().trim().regex(/^[A-Za-z0-9-]{0,40}$/, 'Letters, digits and dashes only, at most 40').optional(),
   /** Pieces inside one counted unit (a pack of 50). Empty when the item is counted singly. */
   packSize: z.number({ message: 'Enter a whole number' }).int('Enter a whole number').min(2, 'At least 2').max(100000, 'At most 100,000').nullable().optional(),
   /** Size attribute such as 1", DN 100 or 50mm. */
@@ -184,3 +186,70 @@ export const receiptListQuerySchema = listQuerySchema.extend({
   status: z.enum(['all', 'posted', 'reversed']).default('all'),
 })
 export type ReceiptListQuery = z.infer<typeof receiptListQuerySchema>
+
+export const customerSchema = z.object({
+  name: trimmed(100),
+  phone: optionalText(40),
+  address: optionalText(200),
+  notes: optionalText(500),
+})
+export type CustomerInput = z.infer<typeof customerSchema>
+export const customerUpdateSchema = customerSchema.partial().extend({
+  isActive: z.boolean().optional(),
+  /** Needs the customer.credit permission; the API checks it separately. */
+  creditAllowed: z.boolean().optional(),
+})
+
+const positiveMoney = moneyText.refine((v) => Number(v) > 0, 'Enter an amount above zero')
+
+/**
+ * One payment. For cash, `amount` is what the customer handed over; the server works out
+ * how much of it is applied and how much is change. Every other method needs a reference.
+ */
+export const paymentSchema = z
+  .object({
+    method: z.enum(PAYMENT_METHODS),
+    amount: positiveMoney,
+    reference: optionalText(60),
+  })
+  .refine((p) => p.method === 'CASH' || !!p.reference, { path: ['reference'], message: 'Enter the reference' })
+export type PaymentInput = z.infer<typeof paymentSchema>
+
+export const saleLineSchema = z.object({
+  productId: z.string().uuid(),
+  quantity: quantityText.refine((q) => Number(q) > 0, 'Enter a quantity above zero'),
+  /** The price the cashier saw. The server sells at its own price and refuses if the two differ. */
+  unitPrice: moneyText,
+})
+export type SaleLineInput = z.infer<typeof saleLineSchema>
+
+/**
+ * A sale. Totals are never part of the request. The id is chosen by the till, so the
+ * same sale sent twice (a retry, or a later sync) is recorded once.
+ */
+export const saleSchema = z.object({
+  id: z.string().uuid(),
+  customerId: z.string().uuid().nullable().optional(),
+  note: optionalText(300),
+  lines: z.array(saleLineSchema).min(1, 'Add at least one item').max(200, 'At most 200 lines on one sale'),
+  payments: z.array(paymentSchema).max(8, 'At most 8 payments on one sale'),
+})
+export type SaleInput = z.infer<typeof saleSchema>
+
+export const salePaymentSchema = z.object({ payment: paymentSchema, idempotencyKey })
+export type SalePaymentInput = z.infer<typeof salePaymentSchema>
+
+export const saleVoidSchema = z.object({ reason: trimmed(300), idempotencyKey })
+export type SaleVoidInput = z.infer<typeof saleVoidSchema>
+
+export const saleListQuerySchema = listQuerySchema.extend({
+  customerId: z.string().uuid().optional(),
+  status: z.enum(['all', 'unpaid', 'voided']).default('all'),
+  search: z.string().trim().max(40).optional(),
+})
+export type SaleListQuery = z.infer<typeof saleListQuerySchema>
+
+export const customerListQuerySchema = z.object({
+  search: z.string().trim().max(80).optional(),
+  filter: z.enum(['active', 'owing', 'inactive']).default('active'),
+})
