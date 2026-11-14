@@ -6,11 +6,13 @@ import { csrfGuard, requireAuth, requirePasswordChanged } from './auth/guards'
 import { env } from './env'
 import { errorHandler, unknownRoute } from './http'
 import { auditRouter } from './routes/audit'
+import { customersRouter } from './routes/customers'
 import { authRouter } from './routes/auth'
 import { locationsRouter } from './routes/locations'
 import { overviewRouter } from './routes/overview'
 import { productsRouter } from './routes/products'
 import { receiptsRouter } from './routes/receipts'
+import { salesRouter } from './routes/sales'
 import { stockRouter } from './routes/stock'
 import { suppliersRouter } from './routes/suppliers'
 import { usersRouter } from './routes/users'
@@ -39,6 +41,8 @@ export function createApp() {
   api.use('/stock', stockRouter)
   api.use('/suppliers', suppliersRouter)
   api.use('/receipts', receiptsRouter)
+  api.use('/customers', customersRouter)
+  api.use('/sales', salesRouter)
   api.use('/users', usersRouter)
   api.use('/audit', auditRouter)
   app.use('/api', api)

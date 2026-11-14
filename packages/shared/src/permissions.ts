@@ -30,6 +30,15 @@ const PERMISSION_TABLE = {
   'receipt.view': ['CEO', 'FINANCE', 'MANAGER'],
   'stock.receive': ['CEO', 'MANAGER'],
   'receipt.reverse': ['CEO', 'MANAGER'],
+  'customer.view': ['CEO', 'FINANCE', 'MANAGER', 'CASHIER'],
+  'customer.manage': ['CEO', 'MANAGER', 'CASHIER'],
+  // Deciding who may buy on credit is a manager's call, never a cashier's.
+  'customer.credit': ['CEO', 'MANAGER'],
+  'sale.create': ['CEO', 'MANAGER', 'CASHIER'],
+  // Cashiers see only the sales they rang up themselves; the API applies that on top of this.
+  'sale.view': ['CEO', 'FINANCE', 'MANAGER', 'CASHIER'],
+  'sale.void': ['CEO', 'MANAGER'],
+  'payment.record': ['CEO', 'MANAGER', 'CASHIER'],
   'user.manage': ['CEO'],
   'audit.view': ['CEO', 'FINANCE'],
 } as const satisfies Record<string, readonly Role[]>
@@ -78,7 +87,7 @@ export const LOCATION_TYPE_LABELS: Record<LocationType, string> = {
   OTHER: 'Other',
 }
 
-export const MOVEMENT_TYPES = ['OPENING', 'ADJUSTMENT', 'COUNT', 'RECEIPT', 'RECEIPT_REVERSAL'] as const
+export const MOVEMENT_TYPES = ['OPENING', 'ADJUSTMENT', 'COUNT', 'RECEIPT', 'RECEIPT_REVERSAL', 'SALE', 'SALE_VOID'] as const
 export type MovementType = (typeof MOVEMENT_TYPES)[number]
 
 export const MOVEMENT_TYPE_LABELS: Record<MovementType, string> = {
@@ -87,4 +96,27 @@ export const MOVEMENT_TYPE_LABELS: Record<MovementType, string> = {
   COUNT: 'Stock count',
   RECEIPT: 'Received',
   RECEIPT_REVERSAL: 'Receipt reversed',
+  SALE: 'Sold',
+  SALE_VOID: 'Sale voided',
 }
+
+export const PAYMENT_METHODS = ['CASH', 'MOBILE_MONEY', 'BANK_TRANSFER', 'CHEQUE'] as const
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number]
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  CASH: 'Cash',
+  MOBILE_MONEY: 'Mobile money',
+  BANK_TRANSFER: 'Bank transfer',
+  CHEQUE: 'Cheque',
+}
+
+/** What the reference box asks for, per method. Cash has none. */
+export const PAYMENT_REFERENCE_LABELS: Record<PaymentMethod, string | null> = {
+  CASH: null,
+  MOBILE_MONEY: 'Transaction ID',
+  BANK_TRANSFER: 'Transfer reference',
+  CHEQUE: 'Cheque number',
+}
+
+/** The legal name printed on receipts and other documents. Division names come from the database. */
+export const COMPANY_NAME = 'Onestopgam Inc'

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ClipboardCheck, KeyRound, LayoutDashboard, LogOut, Menu, Package, PackagePlus, ScrollText, Truck, Users, Warehouse, X, type LucideIcon } from 'lucide-react'
+import { ClipboardCheck, KeyRound, LayoutDashboard, LogOut, Menu, Package, PackagePlus, Receipt, ScrollText, ShoppingCart, Truck, UserRound, Users, Warehouse, X, type LucideIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { ROLE_LABELS, type Permission } from '@onestop/shared'
@@ -18,6 +18,9 @@ interface NavItem {
 function useNavigation(): { main: NavItem[]; admin: NavItem[] } {
   const { can, user } = useSession()
   const main: NavItem[] = [
+    { to: '/pos', label: 'Sell', icon: ShoppingCart, permission: 'sale.create' },
+    { to: '/sales', label: user.role === 'CASHIER' ? 'My sales' : 'Sales', icon: Receipt, permission: 'sale.view' },
+    { to: '/customers', label: 'Customers', icon: UserRound, permission: 'customer.view' },
     { to: '/overview', label: user.role === 'MANAGER' ? 'Dashboard' : 'Overview', icon: LayoutDashboard, permission: 'overview.view' },
     { to: '/inventory', label: user.role === 'CASHIER' ? 'Product lookup' : 'Inventory', icon: Package, permission: 'inventory.view' },
     { to: '/receiving', label: 'Receiving', icon: PackagePlus, permission: 'receipt.view' },

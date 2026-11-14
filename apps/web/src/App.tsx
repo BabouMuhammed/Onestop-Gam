@@ -4,14 +4,18 @@ import type { Permission } from '@onestop/shared'
 import { AppShell } from './layout/AppShell'
 import { AuditLogPage } from './pages/AuditLog'
 import { ChangePasswordPage } from './pages/ChangePassword'
+import { CustomersPage } from './pages/Customers'
 import { InventoryPage } from './pages/Inventory'
 import { LocationsPage } from './pages/Locations'
 import { LoginPage } from './pages/Login'
 import { OverviewPage } from './pages/Overview'
+import { PosPage } from './pages/Pos'
 import { ProductDetailPage } from './pages/ProductDetail'
 import { ReceiptDetailPage } from './pages/ReceiptDetail'
 import { ReceiptNewPage } from './pages/ReceiptNew'
 import { ReceiptsPage } from './pages/Receipts'
+import { SaleDetailPage } from './pages/SaleDetail'
+import { SalesPage } from './pages/Sales'
 import { StockCountPage } from './pages/StockCount'
 import { SuppliersPage } from './pages/Suppliers'
 import { UsersPage } from './pages/Users'
@@ -52,6 +56,10 @@ export function App() {
         <Route element={<AppShell />}>
           <Route index element={<Home />} />
           <Route path="overview" element={<Require permission="overview.view"><OverviewPage /></Require>} />
+          <Route path="pos" element={<Require permission="sale.create"><PosPage /></Require>} />
+          <Route path="sales" element={<Require permission="sale.view"><SalesPage /></Require>} />
+          <Route path="sales/:id" element={<Require permission="sale.view"><SaleDetailPage /></Require>} />
+          <Route path="customers" element={<Require permission="customer.view"><CustomersPage /></Require>} />
           <Route path="inventory" element={<Require permission="inventory.view"><InventoryPage /></Require>} />
           <Route path="inventory/:id" element={<Require permission="inventory.view"><ProductDetailPage /></Require>} />
           <Route path="stock-count" element={<Require permission="stock.count"><StockCountPage /></Require>} />
@@ -70,10 +78,10 @@ export function App() {
   )
 }
 
-/** Each role lands on the screen it uses most. Cashiers go straight to product lookup. */
+/** Each role lands on the screen it uses most. Cashiers go straight to the till. */
 function Home() {
   const { can } = useSession()
-  return <Navigate to={can('overview.view') ? '/overview' : '/inventory'} replace />
+  return <Navigate to={can('overview.view') ? '/overview' : can('sale.create') ? '/pos' : '/inventory'} replace />
 }
 
 /** Hides a page from roles that may not use it. The API enforces the same rule on every request. */

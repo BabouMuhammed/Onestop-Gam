@@ -13,8 +13,11 @@ What protects the system today, where each rule lives, and what is still open.
 | Reading another division's data | The division comes from the signed-in user for managers and cashiers, never from the request. Every query is filtered by it; another division's record answers 404 | `auth/guards.ts`, every route |
 | Acting beyond a role | One permission table, enforced by the API on every route. The web app only hides what the API would refuse | `packages/shared/src/permissions.ts` |
 | Negative or double-counted stock | Row lock per product and location inside a transaction; a database CHECK rejects negative quantities; idempotency keys make a repeated submission a no-op | `apps/api/src/stock.ts`, migration `integrity_rules` |
-| Tampering with history | Stock ledger, price history, posted receipts and audit log are append-only: database triggers reject UPDATE and DELETE for every user, and no API route offers them | migration `integrity_rules`, `suppliers_and_receiving` |
+| Tampering with history | Stock ledger, price history, posted receipts, sales, payments and audit log are append-only: database triggers reject UPDATE and DELETE for every user, and no API route offers them | migration `integrity_rules`, `suppliers_and_receiving` |
 | Wrong totals or costs | Line costs and receipt totals are computed by the server from quantity and unit cost; a total sent by the client is ignored. Cost prices are left out of every response to a cashier | `routes/receipts.ts`, `routes/products.ts` |
+| Wrong prices at the till | The server sells at its own price. The till's price is only compared, and a difference stops the sale. Totals, change and balances are computed by the server | `routes/sales.ts` |
+| Voiding to hide theft | A cashier cannot void. A manager cannot void a sale they rang up; another manager or the CEO must. A void keeps the sale, restores the stock and writes a refund row per payment | `routes/sales.ts` |
+| Uncontrolled credit | A short payment needs a named customer whom a manager has approved for credit; cashiers cannot grant that approval | `routes/sales.ts`, `routes/customers.ts` |
 | Bad input | Every request is validated on the server against shared schemas; money and quantities travel as text and are stored as exact decimals | `packages/shared/src/schemas.ts` |
 | Leaking internals | Password hashes are never selected for responses; server errors return a generic message in production | `routes/users.ts`, `http.ts` |
 | Business data in a public repository | Real stock counts and workbooks are ignored by git; only a made-up sample is committed | `.gitignore` |
@@ -33,6 +36,10 @@ What protects the system today, where each rule lives, and what is still open.
 | View suppliers, receipts and cost prices | Yes | Yes | Yes | No |
 | Add or edit suppliers | Yes | No | Yes | No |
 | Receive stock, reverse a receipt | Yes | No | Yes | No |
+| Sell at the till, take payments, add customers | Yes | No | Yes | Yes |
+| View sales | All | All | All | Own, plus any still owed on |
+| Approve a customer for credit, deactivate a customer | Yes | No | Yes | No |
+| Void a sale | Yes | No | Not their own | No |
 | Manage users | Yes | No | No | No |
 | Read the audit log | Yes | Yes | No | No |
 
@@ -44,5 +51,5 @@ Finance is read-only for now. Whether Finance should record payments is an open 
 - **Backups.** `tools/backup.sh` and the restore steps are in [BACKUP.md](BACKUP.md), and were run end to end. They still have to be scheduled on the real server, with a copy kept off the machine.
 - **HTTPS and deployment.** Cookies are marked Secure only when `NODE_ENV=production`; production must sit behind HTTPS. No deployment has been set up, by design.
 - **Second factor.** CEO and Finance accounts would benefit from two-step sign-in.
-- **Separation of duties.** Later phases must stop a cashier voiding their own sale and require a second person for write-offs.
+- **Separation of duties.** Write-offs (a later phase) must require a second person, as voids now do.
 - **Report exports.** CSV and Excel exports must escape cells that start with `=`, `+`, `-` or `@`.

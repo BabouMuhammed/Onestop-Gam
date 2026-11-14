@@ -44,7 +44,7 @@ productsRouter.get('/', requirePermission('inventory.view'), async (req, res) =>
   if (q.filter === 'no_price') where.push(Prisma.sql`p."sellingPrice" IS NULL`)
   if (q.search) {
     const like = `%${escapeLike(q.search)}%`
-    where.push(Prisma.sql`(p."name" ILIKE ${like} OR p."sku" ILIKE ${like})`)
+    where.push(Prisma.sql`(p."name" ILIKE ${like} OR p."sku" ILIKE ${like} OR p."barcode" = ${q.search})`)
   }
 
   // With a location chosen, show what is at that location; otherwise the total across locations.
@@ -65,7 +65,7 @@ productsRouter.get('/', requirePermission('inventory.view'), async (req, res) =>
   const [rows, totals] = await Promise.all([
     prisma.$queryRaw<ProductRow[]>`
       ${base}
-      ORDER BY ${SORT_COLUMNS[q.sort]} ${direction} NULLS LAST, p."name" ASC
+      ORDER BY ${q.search ? Prisma.sql`(p."barcode" = ${q.search}) DESC NULLS LAST,` : Prisma.empty} ${SORT_COLUMNS[q.sort]} ${direction} NULLS LAST, p."name" ASC
       LIMIT ${q.pageSize} OFFSET ${(q.page - 1) * q.pageSize}`,
     prisma.$queryRaw<{ total: number }[]>`SELECT COUNT(*)::int AS "total" FROM (${base}) counted`,
   ])
@@ -109,6 +109,12 @@ productsRouter.get('/:id', requirePermission('inventory.view'), async (req, res)
   })
 })
 
+async function assertBarcodeFree(divisionId: string, barcode: string | undefined, exceptId?: string) {
+  if (!barcode) return
+  const clash = await prisma.product.findFirst({ where: { divisionId, barcode, NOT: exceptId ? { id: exceptId } : undefined }, select: { sku: true, name: true } })
+  if (clash) throw conflict('Another product already has this barcode', { barcode: `Already used by ${clash.sku} ${clash.name}` })
+}
+
 async function assertNameFree(divisionId: string, name: string, exceptId?: string) {
   const clash = await prisma.product.findFirst({
     where: { divisionId, name: { equals: name, mode: 'insensitive' }, NOT: exceptId ? { id: exceptId } : undefined },
@@ -132,11 +138,12 @@ productsRouter.post('/', requirePermission('product.manage'), async (req, res) =
   const divisionId = await divisionOf(req)
   const { sellingPrice, ...input } = parse(productSchema, req.body)
   await assertNameFree(divisionId, input.name)
+  await assertBarcodeFree(divisionId, input.barcode)
 
   const product = await prisma.$transaction(async (tx) => {
     const sku = await nextSku(tx, divisionId)
     const created = await tx.product.create({
-      data: { divisionId, sku, ...input, size: input.size || null, notes: input.notes || null, sellingPrice: sellingPrice ?? null },
+      data: { divisionId, sku, ...input, barcode: input.barcode || null, size: input.size || null, notes: input.notes || null, sellingPrice: sellingPrice ?? null },
     })
     if (sellingPrice) {
       await tx.priceChange.create({
@@ -162,6 +169,7 @@ productsRouter.patch('/:id', requirePermission('product.manage'), async (req, re
   const before = await prisma.product.findFirst({ where: { id: idParam(req), divisionId } })
   if (!before) throw notFound('Product')
   if (input.name) await assertNameFree(divisionId, input.name, before.id)
+  await assertBarcodeFree(divisionId, input.barcode, before.id)
   if (input.isActive === false) {
     const held = await prisma.stockLevel.count({ where: { productId: before.id, quantity: { gt: 0 } } })
     if (held > 0) throw conflict('This product still has stock. Adjust it to zero before deactivating.')
@@ -172,6 +180,7 @@ productsRouter.patch('/:id', requirePermission('product.manage'), async (req, re
       where: { id: before.id },
       data: {
         ...input,
+        barcode: input.barcode === undefined ? undefined : input.barcode || null,
         size: input.size === undefined ? undefined : input.size || null,
         notes: input.notes === undefined ? undefined : input.notes || null,
       },

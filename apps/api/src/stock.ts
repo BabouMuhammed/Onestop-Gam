@@ -17,6 +17,8 @@ interface StockChange {
   occurredAt?: Date
   /** The stock receipt this movement belongs to, for receipts and their reversals. */
   receiptId?: string
+  /** The sale this movement belongs to, for sales and their voids. */
+  saleId?: string
 }
 
 export interface StockResult {
@@ -72,6 +74,7 @@ export async function changeStock(tx: Tx, input: StockChange): Promise<StockResu
       userId: input.userId,
       createdAt: input.occurredAt,
       receiptId: input.receiptId,
+      saleId: input.saleId,
     },
   })
   return { before, after, delta, moved: true }

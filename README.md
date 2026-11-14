@@ -2,7 +2,7 @@
 
 One system for Onestopgam Inc's two divisions, **Quality Foods** and **Le Gaye Bi Group**: inventory, and later sales, contracts and finance. Each division keeps its own records; the CEO and Finance see both.
 
-## What works today (Phases 1 and 2)
+## What works today (Phases 1 to 3)
 
 - **Sign-in and roles.** CEO, Finance, Manager and Cashier, each limited to what the role may do. Managers and cashiers are confined to their own division.
 - **Inventory.** Products, storage locations, and the quantity of each product at each location.
@@ -11,11 +11,15 @@ One system for Onestopgam Inc's two divisions, **Quality Foods** and **Le Gaye B
 - **Stock adjustments.** Add or remove stock with a required reason.
 - **Packs and sizes.** A product can record how many pieces are in each pack or box, and a size such as 1", DN 100 or 50mm.
 - **Suppliers and receiving.** Record each delivery: supplier, date, the supplier's invoice number, and one line per item with where it was put, how many arrived and what each cost. Posting adds the stock and sets the item's cost price. A posted receipt is never edited; a mistake is reversed, which takes the stock back out and keeps both records.
+- **Selling.** A till screen for scanning or searching items, with the basket kept on the device. Cash (with change), mobile money, bank transfer and cheque, in any mix. Receipts print at receipt-printer width.
+- **Customers and credit.** A sale needs no customer. Paying less than the total needs a customer a manager has approved for credit; the balance is tracked and collected later.
+- **Voids.** A sale is never edited or deleted. A manager who did not ring it up, or the CEO, can void it: stock returns and each payment is refunded on record.
+- **Barcodes.** A product can carry the code printed on its pack.
 - **Prices.** Products can exist without a selling price; managers set prices, and every change is logged.
 - **Users and audit log.** The CEO manages accounts; CEO and Finance can read the audit log.
 - **Opening stock import.** Loads a converted stock-count workbook as a division's starting stock.
 
-Not built yet: sales and POS, customers, contracts, deliveries, damages, finance, reports. See [docs/ROADMAP.md](docs/ROADMAP.md).
+Not built yet: selling while offline, contracts, deliveries, damages, finance, reports. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Run it locally
 
