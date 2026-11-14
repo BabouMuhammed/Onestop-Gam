@@ -128,7 +128,7 @@ productsRouter.post('/', requirePermission('product.manage'), async (req, res) =
   const product = await prisma.$transaction(async (tx) => {
     const sku = await nextSku(tx, divisionId)
     const created = await tx.product.create({
-      data: { divisionId, sku, ...input, notes: input.notes || null, sellingPrice: sellingPrice ?? null },
+      data: { divisionId, sku, ...input, size: input.size || null, notes: input.notes || null, sellingPrice: sellingPrice ?? null },
     })
     if (sellingPrice) {
       await tx.priceChange.create({
@@ -162,7 +162,11 @@ productsRouter.patch('/:id', requirePermission('product.manage'), async (req, re
   const product = await prisma.$transaction(async (tx) => {
     const updated = await tx.product.update({
       where: { id: before.id },
-      data: { ...input, notes: input.notes === undefined ? undefined : input.notes || null },
+      data: {
+        ...input,
+        size: input.size === undefined ? undefined : input.size || null,
+        notes: input.notes === undefined ? undefined : input.notes || null,
+      },
     })
     await audit(tx, req, {
       action: 'product.updated',

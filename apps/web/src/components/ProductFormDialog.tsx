@@ -33,8 +33,8 @@ function ProductForm({ onClose, product, onSaved }: Omit<Props, 'open'>) {
   const form = useForm<ProductInput>({
     resolver: zodResolver(productSchema),
     defaultValues: product
-      ? { name: product.name, unit: product.unit, tracksExpiry: product.tracksExpiry, notes: product.notes ?? '' }
-      : { name: '', unit: 'PIECE', tracksExpiry: false, notes: '', sellingPrice: undefined },
+      ? { name: product.name, unit: product.unit, packSize: product.packSize, size: product.size ?? '', tracksExpiry: product.tracksExpiry, notes: product.notes ?? '' }
+      : { name: '', unit: 'PIECE', packSize: null, size: '', tracksExpiry: false, notes: '', sellingPrice: undefined },
   })
   const { errors } = form.formState
 
@@ -50,7 +50,7 @@ function ProductForm({ onClose, product, onSaved }: Omit<Props, 'open'>) {
       onClose()
       onSaved?.(saved)
     },
-    onError: (error) => setFailure(showFieldErrors(error, form.setError, ['name', 'unit', 'notes', 'sellingPrice']) ? null : error),
+    onError: (error) => setFailure(showFieldErrors(error, form.setError, ['name', 'unit', 'packSize', 'size', 'notes', 'sellingPrice']) ? null : error),
   })
 
   return (
@@ -83,6 +83,21 @@ function ProductForm({ onClose, product, onSaved }: Omit<Props, 'open'>) {
             {(a) => <Input {...a} inputMode="decimal" className="text-right" {...form.register('sellingPrice', { setValueAs: (v) => (v === '' ? undefined : v) })} />}
           </Field>
         )}
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Pieces in each" hint="For packs or boxes, e.g. 50. Leave empty if counted singly." error={errors.packSize?.message}>
+          {(a) => (
+            <Input
+              {...a}
+              inputMode="numeric"
+              className="text-right"
+              {...form.register('packSize', { setValueAs: (v) => (v === '' || v === null || v === undefined ? null : Number(v)) })}
+            />
+          )}
+        </Field>
+        <Field label="Size" hint={'Optional, e.g. 1", DN 100, 50mm.'} error={errors.size?.message}>
+          {(a) => <Input {...a} {...form.register('size')} />}
+        </Field>
       </div>
       <Checkbox label="Has an expiry date" {...form.register('tracksExpiry')} />
       <Field label="Notes" error={errors.notes?.message}>

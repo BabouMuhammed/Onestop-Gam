@@ -16,3 +16,6 @@ apps/api/src/generated/
 data/opening-stock/*.json
 !data/opening-stock/sample.json
 *.xlsx
+
+# Python
+__pycache__/

@@ -28,7 +28,10 @@ UNITS = [
     (r"\bCY\w*LINDERS?\b", "CYLINDER"),
     (r"\bROLLS?\b", "ROLL"),
 ]
-PRICE_IN_NAME = re.compile(r"\s*\(\s*D?\s*(\d{3,5})\s*\)\s*$", re.I)
+# "(400)", "(D350)", "(D3,500)", "(D30,000)" at the end of a name.
+PRICE_IN_NAME = re.compile(r"\s*\(\s*D?\s*(\d{1,3}(?:,\d{3})+|\d{3,6})\s*\)\s*$", re.I)
+# "(50Pcs each)": the item is counted in packs of that many pieces.
+PACK_IN_NAME = re.compile(r"\(\s*(\d+)\s*PCS?\s+EACH\s*\)", re.I)
 
 
 def location_name(sheet_title: str) -> str:
@@ -86,19 +89,26 @@ def convert(path, division, counted_on):
             remark = " ".join(str(c.value).strip() for c in cells[2:]) or None
             rows.append({
                 "name": name, "location": location_name(ws.title), "locationType": location_type(ws.title),
-                "quantity": quantity, "unit": unit, "sellingPrice": None, "remark": remark,
+                "quantity": quantity, "unit": unit, "packSize": None, "sellingPrice": None, "remark": remark,
                 "raw": {"sheet": ws.title, "cell": cells[0].coordinate, "name": first, "quantity": str(cells[1].value).strip()},
             })
 
     # A trailing "(400)" or "(D350)" is a selling price in dalasi. The number is taken
     # out of the name only when that leaves the name unique within the division.
+    for r in rows:
+        pack = PACK_IN_NAME.search(r["name"])
+        if pack and int(pack.group(1)) > 1:
+            r["packSize"] = int(pack.group(1))
+            if r["unit"] == "PIECE":
+                r["unit"] = "PACK"
+
     stripped = {}
     for r in rows:
         stripped.setdefault(PRICE_IN_NAME.sub("", r["name"]).upper(), set()).add(r["name"].upper())
     for r in rows:
         m = PRICE_IN_NAME.search(r["name"])
         if m:
-            r["sellingPrice"] = f"{int(m.group(1))}.00"
+            r["sellingPrice"] = f"{int(m.group(1).replace(',', ''))}.00"
             bare = PRICE_IN_NAME.sub("", r["name"])
             if len(stripped[bare.upper()]) == 1:
                 r["name"] = bare

@@ -52,6 +52,10 @@ export const locationUpdateSchema = locationSchema.partial().extend({ isActive: 
 export const productSchema = z.object({
   name: trimmed(120),
   unit: z.enum(UNITS),
+  /** Pieces inside one counted unit (a pack of 50). Empty when the item is counted singly. */
+  packSize: z.number({ message: 'Enter a whole number' }).int('Enter a whole number').min(2, 'At least 2').max(100000, 'At most 100,000').nullable().optional(),
+  /** Size attribute such as 1", DN 100 or 50mm. */
+  size: z.string().trim().max(40, 'At most 40 characters').optional(),
   tracksExpiry: z.boolean(),
   notes: z.string().trim().max(500, 'At most 500 characters').optional(),
   sellingPrice: moneyText.optional(),

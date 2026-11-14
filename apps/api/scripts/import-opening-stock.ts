@@ -27,6 +27,7 @@ const fileSchema = z.object({
       locationType: z.enum(LOCATION_TYPES),
       quantity: z.string().regex(/^\d+(\.\d{1,3})?$/),
       unit: z.enum(UNITS),
+      packSize: z.number().int().min(2).nullable().optional(),
       sellingPrice: z.string().regex(/^\d+(\.\d{1,2})?$/).nullable(),
       remark: z.string().nullable().optional(),
     }),
@@ -65,6 +66,7 @@ async function importFile(path: string) {
               sku: await nextSku(tx, division.id),
               name: item.name,
               unit: item.unit,
+              packSize: item.packSize ?? null,
               sellingPrice: item.sellingPrice,
               tracksExpiry: item.locationType === 'COLD_STORAGE',
             },
@@ -81,6 +83,8 @@ async function importFile(path: string) {
           type: 'OPENING',
           note: `Counted on ${formatDate(data.countedOn)}${item.remark ? `. ${item.remark}` : ''}`,
           userId: null,
+          // Opening stock is dated on the day it was counted (midday; The Gambia is on UTC).
+          occurredAt: new Date(`${data.countedOn}T12:00:00Z`),
         })
       }
       await tx.auditLog.create({

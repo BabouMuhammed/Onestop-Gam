@@ -13,6 +13,8 @@ interface StockChange {
   type: MovementType
   note?: string | null
   userId: string | null
+  /** When the movement happened, if not now. Only the opening stock import sets this, to the count date. */
+  occurredAt?: Date
 }
 
 export interface StockResult {
@@ -66,6 +68,7 @@ export async function changeStock(tx: Tx, input: StockChange): Promise<StockResu
       balanceAfter: after,
       note: input.note ?? null,
       userId: input.userId,
+      createdAt: input.occurredAt,
     },
   })
   return { before, after, delta, moved: true }

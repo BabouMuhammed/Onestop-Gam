@@ -9,6 +9,7 @@ One system for Onestopgam Inc's two divisions, **Quality Foods** and **Le Gaye B
 - **Stock history.** Every change to stock is written to a permanent ledger with who, when and why.
 - **Stock count.** A count sheet per location, like the Excel sheets it replaces. Posting a count corrects the system figures.
 - **Stock adjustments.** Add or remove stock with a required reason.
+- **Packs and sizes.** A product can record how many pieces are in each pack or box, and a size such as 1", DN 100 or 50mm.
 - **Prices.** Products can exist without a selling price; managers set prices, and every change is logged.
 - **Users and audit log.** The CEO manages accounts; CEO and Finance can read the audit log.
 - **Opening stock import.** Loads a converted stock-count workbook as a division's starting stock.
@@ -43,14 +44,16 @@ python3 tools/convert_workbooks.py "LEGAYE BII STOCK INVENTORY.xlsx" LE_GAYE_BI 
 npm run import:opening-stock
 ```
 
-The converter reads one sheet per location with an item column and a quantity column. It splits quantities such as `58(Pcs)` or `4 1/2 Bag` into a number and a unit, and treats a trailing `(D350)` or `(900)` in an item name as a selling price in dalasi. Review the JSON before importing. A division that already has products is skipped, so the import cannot run twice.
+The converter reads one sheet per location with an item column and a quantity column. It splits quantities such as `58(Pcs)` or `4 1/2 Bag` into a number and a unit, and treats a trailing `(D350)`, `(900)` or `(D3,500)` in an item name as a selling price in dalasi, and reads `(50Pcs each)` as a pack of 50 pieces. Review the JSON before importing. A division that already has products is skipped, so the import cannot run twice.
 
 ## Checks
 
 ```bash
 npm test            # API tests against the test database (it is wiped on every run)
+npm run lint
 npm run typecheck
 npm run build
+npm run test:tools  # workbook converter rules (needs Python and openpyxl)
 ```
 
 The tests cover sign-in and lockout, forgery protection, division isolation, role permissions, stock that cannot go negative, simultaneous withdrawals of the last units, repeated submissions, and the append-only ledger.
@@ -61,8 +64,8 @@ The tests cover sign-in and lockout, forgery protection, division isolation, rol
 apps/api          Express + Prisma + PostgreSQL
 apps/web          React + Vite + Tailwind
 packages/shared   Roles, permissions, request schemas and formats used by both
-tools             Workbook converter
-docs              Security, design system, roadmap
+tools             Workbook converter, database backup script
+docs              Security, backup and restore, design system, roadmap
 ```
 
 ## Things to know

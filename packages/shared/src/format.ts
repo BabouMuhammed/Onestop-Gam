@@ -19,22 +19,16 @@ export function formatQuantityWithUnit(value: string | number, unit: Unit): stri
   return `${quantity.format(n)} ${n === 1 ? label.one : label.many}`
 }
 
-const date = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-const dateTime = new Intl.DateTimeFormat('en-GB', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-  hour12: false,
-})
+const date = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
+const time = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
 
-/** One date format everywhere: "14 Nov 2026". */
+/** One date format everywhere: "14/11/2026". */
 export function formatDate(value: string | Date): string {
   return date.format(new Date(value))
 }
 
-/** "14 Nov 2026, 14:05" */
+/** "14/11/2026 14:05" */
 export function formatDateTime(value: string | Date): string {
-  return dateTime.format(new Date(value))
+  const d = new Date(value)
+  return `${date.format(d)} ${time.format(d)}`
 }

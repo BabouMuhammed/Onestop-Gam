@@ -37,7 +37,7 @@ Finance is read-only for now. Whether Finance should record payments is an open 
 ## Still open
 
 - **This repository is public.** Anyone can read the code. Keep `.env`, workbooks and price lists out of it, or make the repository private.
-- **Backups.** Nothing backs up the database yet. Before real use: scheduled PostgreSQL backups and a tested restore.
+- **Backups.** `tools/backup.sh` and the restore steps are in [BACKUP.md](BACKUP.md), and were run end to end. They still have to be scheduled on the real server, with a copy kept off the machine.
 - **HTTPS and deployment.** Cookies are marked Secure only when `NODE_ENV=production`; production must sit behind HTTPS. No deployment has been set up, by design.
 - **Second factor.** CEO and Finance accounts would benefit from two-step sign-in.
 - **Separation of duties.** Later phases must stop a cashier voiding their own sale and require a second person for write-offs.

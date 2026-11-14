@@ -114,6 +114,10 @@ model Product {
   sku          String
   name         String
   unit         Unit     @default(PIECE)
+  /// Pieces inside one counted unit, e.g. 50 for a pack of 50. Null when counted singly.
+  packSize     Int?
+  /// Size attribute such as 1", DN 100 or 50mm.
+  size         String?
   /// Null until a manager sets a price. A product without a price cannot be sold.
   sellingPrice Decimal? @db.Decimal(12, 2)
   tracksExpiry Boolean  @default(false)

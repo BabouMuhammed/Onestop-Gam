@@ -34,6 +34,7 @@ export function ProductDetailPage() {
 
   const { product, levels, movements, priceChanges, total } = detail.data
   const unit = product.unit
+  const pieces = product.packSize ? Number(total) * product.packSize : null
 
   const historyColumns: Column<Movement>[] = [
     movementColumns.when,
@@ -86,7 +87,10 @@ export function ProductDetailPage() {
               levels.length > 0 ? (
                 <p className="flex justify-between font-medium">
                   <span>Total in stock</span>
-                  <span className="num">{formatQuantityWithUnit(total, unit)}</span>
+                  <span className="num">
+                    {formatQuantityWithUnit(total, unit)}
+                    {pieces !== null ? <span className="font-normal text-ink-2"> ({formatQuantityWithUnit(pieces, 'PIECE')})</span> : null}
+                  </span>
                 </p>
               ) : undefined
             }
@@ -97,7 +101,8 @@ export function ProductDetailPage() {
           <dl className="divide-y divide-line rounded-lg border border-line bg-surface">
             {[
               ['Selling price', product.sellingPrice === null ? <Flag tone="warn">No price</Flag> : formatGMD(product.sellingPrice)],
-              ['Counted in', UNIT_NAMES[unit]],
+              ['Counted in', product.packSize ? `${UNIT_NAMES[unit]} of ${product.packSize} pieces` : UNIT_NAMES[unit]],
+              ...(product.size ? [['Size', product.size] as const] : []),
               ['Expiry date', product.tracksExpiry ? 'Tracked' : 'Not tracked'],
               ['Notes', product.notes || <Flag tone="muted">None</Flag>],
             ].map(([label, value]) => (

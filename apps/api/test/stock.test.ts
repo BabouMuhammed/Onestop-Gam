@@ -161,6 +161,20 @@ describe('products and prices', () => {
     expect((await manager.get('/api/products?filter=no_price')).body.total).toBe(0)
   })
 
+  it('stores pieces per pack and a size, and rejects a pack of fewer than two', async () => {
+    const manager = await signIn('lgb.manager')
+    const base = { unit: 'PACK', tracksExpiry: false }
+    const made = await manager.post('/api/products').send({ ...base, name: 'WALL PLUG 10MM (50Pcs each)', packSize: 50, size: '10mm' })
+    expect(made.status).toBe(201)
+    expect(made.body.product).toMatchObject({ packSize: 50, size: '10mm' })
+
+    const cleared = await manager.patch(`/api/products/${made.body.product.id}`).send({ packSize: null, size: '' })
+    expect(cleared.body.product).toMatchObject({ packSize: null, size: null })
+
+    expect((await manager.post('/api/products').send({ ...base, name: 'PACK OF ONE', packSize: 1 })).status).toBe(400)
+    expect((await manager.post('/api/products').send({ ...base, name: 'HALF PACK', packSize: 2.5 })).status).toBe(400)
+  })
+
   it('searches, filters by location and sorts', async () => {
     const manager = await signIn('qf.manager')
     await manager.post('/api/stock/adjustments').send(adjustment(world, 'IN', '4'))

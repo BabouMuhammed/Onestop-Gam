@@ -34,7 +34,9 @@ Project setup, sign-in and roles, division isolation, design system, products, l
 ## Decisions made
 
 - The app and printed documents use the names on the logos: **Onestopgam Inc**, **Quality Foods**, **Le Gaye Bi Group**. Division names are stored once, in the `Division` table.
-- A bracketed number in an item name, such as `(D350)` or `(900)`, is a selling price in dalasi.
+- A bracketed number in an item name, such as `(D350)` or `(900)`, is a selling price in dalasi. Thirteen Le Gaye Bi items carry one, including `(D3,500)` and `(D30,000)`.
+- Opening stock is dated on the day it was counted: 10/11/2026 for Quality Foods, 11/11/2026 for Le Gaye Bi Group.
+- `(50Pcs each)` in a name means the item is counted in packs of 50 pieces. `WHITE TAP (100 Pcs)` was left as written because its count carries the remark "ASKED IDA JALLOW".
 - Products may exist without a selling price. They can be counted and adjusted, and will not be sellable until a price is set.
 - Cost prices will be captured when stock is received.
 - Finance is read-only until the finance phase decides otherwise.
@@ -49,4 +51,5 @@ Project setup, sign-in and roles, division isolation, design system, products, l
 6. **Credit sales and payment methods.** Is credit allowed? Which payment methods are accepted (cash, mobile money, bank transfer)?
 7. **Finance.** Read-only, or able to record payments?
 8. **Warehouses.** One site per division, or several?
-9. **Logo.** The Quality Foods logo file is a low-resolution screenshot; an original is needed for receipts and invoices.
+9. **Unnamed item.** Quality Foods Shelf 3 has a row named only `(POWER JUICE)` with 195 in stock. Which brand is it?
+10. **Logo.** The Quality Foods logo file is a low-resolution screenshot; an original is needed for receipts and invoices.

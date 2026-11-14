@@ -35,7 +35,7 @@ All text colours meet WCAG AA contrast on `surface` and `canvas`.
 
 - Money: `D 1,250.00` (`formatGMD`)
 - Quantities: `1,097 pcs`, `4.5 bags` (`formatQuantityWithUnit`)
-- Dates: `14 Nov 2026` and `14 Nov 2026, 14:05` (`formatDate`, `formatDateTime`)
+- Dates: `14/11/2026` and `14/11/2026 14:05` (`formatDate`, `formatDateTime`)
 
 All four live in `packages/shared/src/format.ts`. Do not format by hand.
 

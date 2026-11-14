@@ -35,6 +35,8 @@ export interface Product {
   sku: string
   name: string
   unit: Unit
+  packSize: number | null
+  size: string | null
   sellingPrice: string | null
   tracksExpiry: boolean
   notes: string | null
