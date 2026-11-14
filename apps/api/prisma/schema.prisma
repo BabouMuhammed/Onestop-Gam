@@ -1,0 +1,216 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  CEO
+  FINANCE
+  MANAGER
+  CASHIER
+}
+
+enum LocationType {
+  SHELF
+  FLOOR
+  COLD_STORAGE
+  TABLE
+  OTHER
+}
+
+enum Unit {
+  PIECE
+  PACK
+  BOX
+  BAG
+  SACHET
+  ROLL
+  CYLINDER
+  CARTON
+  BOTTLE
+  KG
+  LITRE
+}
+
+enum MovementType {
+  OPENING
+  ADJUSTMENT
+  COUNT
+}
+
+/// A business division. Display names live here and nowhere else.
+model Division {
+  id            String   @id @default(uuid())
+  code          String   @unique
+  name          String
+  skuPrefix     String
+  nextSkuNumber Int      @default(1)
+  createdAt     DateTime @default(now())
+
+  users     User[]
+  locations Location[]
+  products  Product[]
+  movements StockMovement[]
+}
+
+model User {
+  id                 String    @id @default(uuid())
+  username           String    @unique
+  name               String
+  passwordHash       String
+  role               Role
+  /// Null for CEO and Finance, who work across both divisions.
+  divisionId         String?
+  isActive           Boolean   @default(true)
+  mustChangePassword Boolean   @default(true)
+  failedLogins       Int       @default(0)
+  lockedUntil        DateTime?
+  lastLoginAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  division Division? @relation(fields: [divisionId], references: [id])
+  sessions Session[]
+}
+
+model Session {
+  id         String   @id @default(uuid())
+  /// SHA-256 of the cookie value. The raw token is never stored.
+  tokenHash  String   @unique
+  userId     String
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  expiresAt  DateTime
+  ip         String?
+  userAgent  String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Location {
+  id         String       @id @default(uuid())
+  divisionId String
+  name       String
+  type       LocationType @default(SHELF)
+  isActive   Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+
+  division  Division        @relation(fields: [divisionId], references: [id])
+  levels    StockLevel[]
+  movements StockMovement[]
+
+  @@unique([divisionId, name])
+}
+
+model Product {
+  id           String   @id @default(uuid())
+  divisionId   String
+  sku          String
+  name         String
+  unit         Unit     @default(PIECE)
+  /// Pieces inside one counted unit, e.g. 50 for a pack of 50. Null when counted singly.
+  packSize     Int?
+  /// Size attribute such as 1", DN 100 or 50mm.
+  size         String?
+  /// Null until a manager sets a price. A product without a price cannot be sold.
+  sellingPrice Decimal? @db.Decimal(12, 2)
+  tracksExpiry Boolean  @default(false)
+  notes        String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  division     Division        @relation(fields: [divisionId], references: [id])
+  levels       StockLevel[]
+  movements    StockMovement[]
+  priceChanges PriceChange[]
+
+  @@unique([divisionId, sku])
+  @@unique([divisionId, name])
+}
+
+/// Quantity of one product at one location. A database CHECK keeps it at zero or above.
+model StockLevel {
+  id         String   @id @default(uuid())
+  productId  String
+  locationId String
+  quantity   Decimal  @default(0) @db.Decimal(14, 3)
+  updatedAt  DateTime @updatedAt
+
+  product  Product  @relation(fields: [productId], references: [id])
+  location Location @relation(fields: [locationId], references: [id])
+
+  @@unique([productId, locationId])
+  @@index([locationId])
+}
+
+/// Append-only ledger. Every change to a StockLevel writes one row here in the same
+/// transaction. A database trigger rejects UPDATE and DELETE.
+model StockMovement {
+  id            String       @id @default(uuid())
+  divisionId    String
+  productId     String
+  locationId    String
+  type          MovementType
+  quantityDelta Decimal      @db.Decimal(14, 3)
+  balanceAfter  Decimal      @db.Decimal(14, 3)
+  note          String?
+  userId        String?
+  createdAt     DateTime     @default(now())
+
+  division Division @relation(fields: [divisionId], references: [id])
+  product  Product  @relation(fields: [productId], references: [id])
+  location Location @relation(fields: [locationId], references: [id])
+
+  @@index([productId, createdAt])
+  @@index([divisionId, createdAt])
+}
+
+model PriceChange {
+  id        String   @id @default(uuid())
+  productId String
+  oldPrice  Decimal? @db.Decimal(12, 2)
+  newPrice  Decimal  @db.Decimal(12, 2)
+  userId    String
+  createdAt DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([productId, createdAt])
+}
+
+/// Makes a repeated submission (double click, retry after a dropped connection) a no-op.
+model IdempotencyKey {
+  id        String   @id @default(uuid())
+  userId    String
+  key       String
+  response  Json?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, key])
+}
+
+/// Append-only. A database trigger rejects UPDATE and DELETE, for every role.
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  userName   String?
+  divisionId String?
+  action     String
+  entity     String
+  entityId   String?
+  summary    String
+  before     Json?
+  after      Json?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([divisionId, createdAt])
+}

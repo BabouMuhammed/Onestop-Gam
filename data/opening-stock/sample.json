@@ -1,0 +1,10 @@
+{
+ "division": "QUALITY_FOODS",
+ "countedOn": "2026-01-01",
+ "source": "sample.json (made-up data showing the format)",
+ "items": [
+  { "name": "EXAMPLE TINNED FISH", "location": "Shelf 1", "locationType": "SHELF", "quantity": "24", "unit": "PIECE", "sellingPrice": null, "remark": null },
+  { "name": "EXAMPLE RICE (50Kg)", "location": "Items on the ground", "locationType": "FLOOR", "quantity": "6", "unit": "BAG", "sellingPrice": "2500.00", "remark": null },
+  { "name": "EXAMPLE FROZEN CHICKEN", "location": "Fridge", "locationType": "COLD_STORAGE", "quantity": "4.5", "unit": "BOX", "sellingPrice": null, "remark": "Half box opened" }
+ ]
+}
