@@ -15,12 +15,11 @@ const RANGES = [
 ] as const
 
 export function OverviewPage() {
-  const { division, setDivision, canSwitchDivision, divisions, can } = useSession()
-  // CEO and Finance see both divisions together by default, and can narrow to one.
-  const [chosen, setChosen] = useState<'all' | string>('all')
-  const scope = canSwitchDivision ? chosen : division.id
+  const { setDivision, divisions, can, dashboardScope } = useSession()
+  // CEO and Finance choose both divisions or one in the top bar; others see their own.
+  const scope = dashboardScope
   const [days, setDays] = useState<7 | 30 | 90>(30)
-  const scopeName = scope === 'all' ? 'both divisions' : (divisions.find((d) => d.id === scope)?.name ?? division.name)
+  const scopeName = scope === 'all' ? 'both divisions' : (divisions.find((d) => d.id === scope)?.name ?? '')
 
   const dashboard = useQuery({
     queryKey: ['dashboard', scope, days],
@@ -61,20 +60,6 @@ export function OverviewPage() {
       <PageHeader
         title="Dashboard"
         detail={d ? `Sales and money for ${scopeName}. Updated ${formatDateTime(d.generatedAt)}` : `Sales and money for ${scopeName}`}
-        actions={
-          canSwitchDivision ? (
-            <div className="w-52">
-              <Select aria-label="Divisions shown" value={chosen} onChange={(e) => setChosen(e.target.value)}>
-                <option value="all">Both divisions</option>
-                {divisions.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          ) : undefined
-        }
       />
 
       <ErrorAlert error={dashboard.error} className="mb-3" />

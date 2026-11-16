@@ -35,7 +35,7 @@ export function CustomersPage() {
     queryKey: ['customers', division.id, { filter, search }],
     queryFn: () => api<{ rows: CustomerRow[] }>(`/customers${query({ filter, search })}`),
   })
-  const owed = customers.data?.rows.reduce((sum, c) => sum + Number(c.balance), 0) ?? 0
+  const owed = customers.data?.rows.reduce((sum, c) => sum + Number(c.owed), 0) ?? 0
 
   const columns: Column<CustomerRow>[] = [
     { key: 'name', header: 'Customer', cell: (c) => <span className="font-medium">{c.name}</span> },
@@ -56,17 +56,16 @@ export function CustomersPage() {
         ),
     },
     {
-      key: 'balance',
-      header: 'Owes',
-      numeric: true,
-      cell: (c) =>
-        Number(c.balance) > 0 ? (
-          <Link to={`/sales?customer=${c.id}&status=unpaid`} className="font-medium text-warn underline">
-            {formatGMD(c.balance)}
-          </Link>
-        ) : (
-          <span className="text-ink-3">Nothing</span>
-        ),
+      key: 'creditOwed', header: 'Credit sales', numeric: true, hideBelow: 'sm',
+      cell: (c) => <Link to={`/sales?customer=${c.id}&status=unpaid`} className="text-brand underline">{formatGMD(c.creditOwed)}</Link>,
+    },
+    ...(can('contract.view') ? [{
+      key: 'contractOwed', header: 'Contracts', numeric: true, hideBelow: 'sm',
+      cell: (c: CustomerRow) => formatGMD(c.contractOwed ?? '0'),
+    } satisfies Column<CustomerRow>] : []),
+    {
+      key: 'owed', header: 'Owes', numeric: true,
+      cell: (c) => Number(c.owed) > 0 ? <span className="font-medium text-warn">{formatGMD(c.owed)}</span> : <span className="text-ink-3">Nothing</span>,
     },
     ...(manage
       ? [

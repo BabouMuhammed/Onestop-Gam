@@ -28,6 +28,8 @@ interface Session extends Me {
   setDivision: (id: string) => void
   /** True for CEO and Finance, who can switch between divisions. */
   canSwitchDivision: boolean
+  dashboardScope: string
+  setDashboardScope: (id: string) => void
 }
 
 const SessionContext = createContext<Session | null>(null)
@@ -54,6 +56,8 @@ export function SessionProvider({ me, children }: { me: Me; children: ReactNode 
     return me.divisions.find((d) => d.id === remembered)?.id ?? me.divisions[0]!.id
   })
   const division = me.divisions.find((d) => d.id === divisionId) ?? me.divisions[0]!
+  const crossDivision = me.user.role === 'CEO' || me.user.role === 'FINANCE'
+  const [dashboardScope, setDashboardScope] = useState('all')
   // Set before children render, so their first request already carries the division.
   setActiveDivision(division.id)
 
@@ -66,9 +70,15 @@ export function SessionProvider({ me, children }: { me: Me; children: ReactNode 
       ...me,
       can: (permission) => me.permissions.includes(permission),
       division,
-      canSwitchDivision: me.divisions.length > 1,
+      canSwitchDivision: crossDivision && me.divisions.length > 1,
+      dashboardScope: crossDivision ? dashboardScope : division.id,
+      setDashboardScope: (id) => {
+        if (crossDivision && (id === 'all' || me.divisions.some((d) => d.id === id))) setDashboardScope(id)
+      },
       setDivision: (id) => {
+        if (!me.divisions.some((d) => d.id === id)) return
         setDivisionId(id)
+        setDashboardScope(id)
         setActiveDivision(id)
         try {
           localStorage.setItem(STORAGE_KEY, id)
@@ -77,7 +87,7 @@ export function SessionProvider({ me, children }: { me: Me; children: ReactNode 
         }
       },
     }),
-    [me, division],
+    [me, division, crossDivision, dashboardScope],
   )
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
 }
