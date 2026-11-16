@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useSearchParams } from 'react-router'
 import { loginSchema, type LoginInput } from '@onestop/shared'
@@ -20,6 +21,16 @@ export function LoginPage() {
     onError: () => form.resetField('password'),
   })
   const { errors } = form.formState
+  // On the free hosting plan the server sleeps when unused and takes up to a minute to wake.
+  const [slow, setSlow] = useState(false)
+  useEffect(() => {
+    if (!signIn.isPending) {
+      setSlow(false)
+      return
+    }
+    const timer = setTimeout(() => setSlow(true), 4000)
+    return () => clearTimeout(timer)
+  }, [signIn.isPending])
 
   return (
     <main className="flex min-h-dvh items-start justify-center px-4 pt-[12vh] pb-8">
@@ -42,6 +53,11 @@ export function LoginPage() {
             <Button type="submit" variant="primary" busy={signIn.isPending} className="w-full">
               Sign in
             </Button>
+            {slow ? (
+              <p className="text-center text-sm text-ink-2" role="status">
+                Waking the server. The first sign-in after a quiet spell can take up to a minute.
+              </p>
+            ) : null}
           </form>
         </div>
         <p className="mt-3 text-center text-sm text-ink-3">Forgot your password? Ask an administrator to reset it.</p>

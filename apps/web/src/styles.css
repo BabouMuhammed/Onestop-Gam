@@ -119,7 +119,7 @@
   z-index: -1;
   inset: 0 0 auto;
   height: 100svh;
-  background: url('/brand/onestopgam-background-desktop.png') center / cover no-repeat;
+  background: url('/brand/onestopgam-background-desktop.jpg') center / cover no-repeat;
 }
 /* Source signage ends at 72.4% of the 1586x992 desktop image. Account for
    cover's centered crop so content never covers it, even in a short window. */
@@ -152,7 +152,7 @@
 .welcome-page .welcome-start:hover { background: var(--color-onestop-green-hover); }
 .welcome-page :focus-visible { outline: 3px solid var(--color-onestop-green); outline-offset: 3px; box-shadow: 0 0 0 6px #fff; }
 @media (max-aspect-ratio: 1/1) {
-  .welcome-backdrop { background-image: url('/brand/onestopgam-background-portrait.png'); }
+  .welcome-backdrop { background-image: url('/brand/onestopgam-background-portrait.jpg'); }
   /* Reserve the bottom of the photographed tagline (63% of 916x1717). */
   .welcome-signage-space { min-height: calc(50svh + max(13svh, 24.368vw) + .75rem - var(--welcome-padding)); }
 }

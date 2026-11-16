@@ -19,7 +19,9 @@ export function useMe() {
       }
     },
     staleTime: 60_000,
-    retry: false,
+    // A sleeping server can time out the first request while it wakes; try again a few times.
+    retry: (failures, error) => failures < 4 && error instanceof ApiError && (error.status === 0 || error.status >= 500),
+    retryDelay: 5000,
   })
 }
 
