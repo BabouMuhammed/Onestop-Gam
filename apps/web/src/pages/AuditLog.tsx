@@ -3,6 +3,7 @@ import { Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { AUDIT_AREAS, formatDateTime, type AuditArea } from '@onestop/shared'
+import { ExportButton } from '../components/ExportButton'
 import { api, query } from '../api'
 import { DateRangeFilter } from '../components/DateRangeFilter'
 import { useSession } from '../session'
@@ -86,12 +87,15 @@ export function AuditLogPage() {
         title="Audit log"
         detail="A permanent record of sign-ins and changes. Entries cannot be edited or deleted."
         actions={
-          canSwitchDivision ? (
-            <Select aria-label="Show entries for" className="w-56" value={scope} onChange={(e) => update({ scope: e.target.value === 'division' ? 'division' : null, person: null })}>
-              <option value="all">Both divisions and company-wide</option>
-              <option value="division">{division.name} only</option>
-            </Select>
-          ) : null
+          <>
+            {canSwitchDivision ? (
+              <Select aria-label="Show entries for" className="w-56" value={scope} onChange={(e) => update({ scope: e.target.value === 'division' ? 'division' : null, person: null })}>
+                <option value="all">Both divisions and company-wide</option>
+                <option value="division">{division.name} only</option>
+              </Select>
+            ) : null}
+            <ExportButton path={`/audit${query({ from, to, userId, area, search })}`} division={target} />
+          </>
         }
       />
 

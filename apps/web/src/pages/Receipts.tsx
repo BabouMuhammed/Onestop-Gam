@@ -2,6 +2,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { Plus } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { formatDate, formatGMD, type ReceiptListQuery } from '@onestop/shared'
+import { ExportButton } from '../components/ExportButton'
 import { api, query } from '../api'
 import { useSession } from '../session'
 import { DateRangeFilter } from '../components/DateRangeFilter'
@@ -74,11 +75,14 @@ export function ReceiptsPage() {
         title="Receiving"
         detail={receipts.data ? `${receipts.data.total} receipt${receipts.data.total === 1 ? '' : 's'}` : `Stock delivered to ${division.name}`}
         actions={
-          receive ? (
-            <ButtonLink to="/receiving/new" variant="primary" icon={<Plus className="size-4" aria-hidden />}>
-              Receive stock
-            </ButtonLink>
-          ) : undefined
+          <>
+            <ExportButton path={`/receipts${query({ supplierId, status, from, to })}`} />
+            {receive ? (
+              <ButtonLink to="/receiving/new" variant="primary" icon={<Plus className="size-4" aria-hidden />}>
+                Receive stock
+              </ButtonLink>
+            ) : null}
+          </>
         }
       />
 

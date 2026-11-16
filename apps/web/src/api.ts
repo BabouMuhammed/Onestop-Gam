@@ -64,3 +64,34 @@ export function query(params: Record<string, string | number | undefined | null>
   const text = search.toString()
   return text ? `?${text}` : ''
 }
+
+/**
+ * Download a list as a CSV file. Goes through fetch rather than a plain link so the
+ * division header is sent, exactly as for the list itself.
+ */
+export async function downloadCsv(path: string, { division }: { division?: string | 'all' } = {}): Promise<void> {
+  const headers: Record<string, string> = {}
+  const scope = division ?? activeDivision
+  if (scope) headers['x-division-id'] = scope
+  const separator = path.includes('?') ? '&' : '?'
+  let response: Response
+  try {
+    response = await fetch(`/api${path}${separator}format=csv`, { headers, credentials: 'same-origin' })
+  } catch {
+    throw new ApiError(0, 'NETWORK', 'Could not reach the server. Check the connection and try again.')
+  }
+  if (!response.ok) {
+    const data = (await response.json().catch(() => null)) as { error?: { code?: string; message?: string } } | null
+    if (response.status === 401) onSignedOut()
+    throw new ApiError(response.status, data?.error?.code ?? 'UNKNOWN', data?.error?.message ?? 'The export failed')
+  }
+  const name = /filename="([^"]+)"/.exec(response.headers.get('content-disposition') ?? '')?.[1] ?? 'onestop-export.csv'
+  const url = URL.createObjectURL(await response.blob())
+  const link = document.createElement('a')
+  link.href = url
+  link.download = name
+  document.body.append(link)
+  link.click()
+  link.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 10_000)
+}

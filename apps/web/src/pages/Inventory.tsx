@@ -3,6 +3,7 @@ import { Plus, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { formatGMD, formatQuantityWithUnit, type ProductListQuery } from '@onestop/shared'
+import { ExportButton } from '../components/ExportButton'
 import { api, query } from '../api'
 import { ProductFormDialog } from '../components/ProductFormDialog'
 import { useSession } from '../session'
@@ -108,11 +109,14 @@ export function InventoryPage() {
         title={lookup ? 'Product lookup' : 'Inventory'}
         detail={products.data ? `${products.data.total} product${products.data.total === 1 ? '' : 's'}${filtered ? ' match' : ''}` : undefined}
         actions={
-          can('product.manage') ? (
-            <Button variant="primary" icon={<Plus className="size-4" aria-hidden />} onClick={() => setAdding(true)}>
-              Add product
-            </Button>
-          ) : null
+          <>
+            <ExportButton path={`/products${query({ search, locationId, filter, sort, dir })}`} />
+            {can('product.manage') ? (
+              <Button variant="primary" icon={<Plus className="size-4" aria-hidden />} onClick={() => setAdding(true)}>
+                Add product
+              </Button>
+            ) : null}
+          </>
         }
       />
 

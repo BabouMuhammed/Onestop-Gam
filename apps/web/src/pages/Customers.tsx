@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form'
 import { Link, useSearchParams } from 'react-router'
 import { z } from 'zod'
 import { customerSchema, formatGMD } from '@onestop/shared'
+import { ExportButton } from '../components/ExportButton'
 import { api, query } from '../api'
 import { showFieldErrors } from '../forms'
 import { useSession } from '../session'
@@ -96,11 +97,14 @@ export function CustomersPage() {
         title="Customers"
         detail={customers.data ? `${customers.data.rows.length} shown, owing ${formatGMD(owed)} in total` : `Who ${division.name} sells to`}
         actions={
-          manage ? (
-            <Button variant="primary" icon={<Plus className="size-4" aria-hidden />} onClick={() => setEditing('new')}>
-              Add customer
-            </Button>
-          ) : undefined
+          <>
+            <ExportButton path={`/customers${query({ filter, search })}`} />
+            {manage ? (
+              <Button variant="primary" icon={<Plus className="size-4" aria-hidden />} onClick={() => setEditing('new')}>
+                Add customer
+              </Button>
+            ) : null}
+          </>
         }
       />
       <div className="mb-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_14rem]">
