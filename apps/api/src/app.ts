@@ -14,6 +14,7 @@ import { damagesRouter } from './routes/damages'
 import { dashboardRouter } from './routes/dashboard'
 import { authRouter } from './routes/auth'
 import { locationsRouter } from './routes/locations'
+import { openingStockRouter } from './routes/openingStock'
 import { overviewRouter } from './routes/overview'
 import { priceRequestsRouter } from './routes/priceRequests'
 import { productsRouter } from './routes/products'
@@ -47,6 +48,7 @@ export function createApp() {
   api.use('/overview', overviewRouter)
   api.use('/dashboard', dashboardRouter)
   api.use('/locations', locationsRouter)
+  api.use('/opening-stock', openingStockRouter)
   api.use('/products', productsRouter)
   api.use('/price-requests', priceRequestsRouter)
   api.use('/stock', stockRouter)
