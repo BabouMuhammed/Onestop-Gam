@@ -7,7 +7,7 @@ import { DUMMY_HASH, hashPassword, verifyPassword } from '../auth/password'
 import { completeTwoStep, endSession, readSession, startSession } from '../auth/session'
 import { checkCode, decryptSecret, encryptSecret, matchRecoveryCode, newRecoveryCodes, newSecret, setupDetails } from '../auth/twoStep'
 import { prisma } from '../db'
-import { isTest } from '../env'
+import { env, isTest } from '../env'
 import { HttpError, parse } from '../http'
 
 const MAX_FAILED_LOGINS = 5
@@ -45,7 +45,7 @@ authRouter.post('/login', loginLimiter, async (req, res) => {
   }
 
   // With two-step sign-in set up, the password alone opens nothing: the session waits for the code.
-  if (user.totpEnabledAt) {
+  if (env.REQUIRE_TWO_STEP && user.totpEnabledAt) {
     await startSession(prisma, user.id, req, res, { pending: true })
     res.json({ twoStep: true })
     return
@@ -63,7 +63,7 @@ authRouter.post('/login', loginLimiter, async (req, res) => {
       actor: { id: user.id, name: user.name },
     })
   })
-  res.json({ ok: true, setUpTwoStep: needsTwoStep(user.role) })
+  res.json({ ok: true, setUpTwoStep: env.REQUIRE_TWO_STEP && needsTwoStep(user.role) })
 })
 
 /**
@@ -209,7 +209,7 @@ authRouter.get('/me', requireAuth, async (req, res) => {
     select: { id: true, code: true, name: true },
     orderBy: { name: 'asc' },
   })
-  res.json({ user, permissions: permissionsFor(user.role), divisions, twoStep: { required: needsTwoStep(user.role), enabled: user.twoStepEnabled } })
+  res.json({ user, permissions: permissionsFor(user.role), divisions, twoStep: { required: env.REQUIRE_TWO_STEP && needsTwoStep(user.role), enabled: user.twoStepEnabled, switchedOn: env.REQUIRE_TWO_STEP } })
 })
 
 authRouter.post('/change-password', requireAuth, async (req, res) => {

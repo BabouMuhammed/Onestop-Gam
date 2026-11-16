@@ -1,6 +1,7 @@
 import { authenticator } from 'otplib'
-import { afterAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { decryptSecret } from '../src/auth/twoStep'
+import { env } from '../src/env'
 import { app, PASSWORD, prisma, request, seedWorld, signIn, TEST_TOTP_SECRET } from './helpers'
 
 beforeEach(async () => {
@@ -24,7 +25,7 @@ describe('two-step sign-in', () => {
 
     await prisma.user.update({ where: { username: 'ceo' }, data: { totpLastStep: null } })
     expect((await agent.post('/api/auth/two-step').send({ code: authenticator.generate(TEST_TOTP_SECRET) })).status).toBe(200)
-    expect((await agent.get('/api/auth/me')).body.twoStep).toEqual({ required: true, enabled: true })
+    expect((await agent.get('/api/auth/me')).body.twoStep).toEqual({ required: true, enabled: true, switchedOn: true })
     expect((await agent.get('/api/overview')).status).toBe(200)
   })
 
@@ -61,7 +62,7 @@ describe('two-step sign-in', () => {
     const blocked = await agent.get('/api/products').set('x-division-id', 'all')
     expect(blocked.status).toBe(403)
     expect(blocked.body.error.code).toBe('TWO_STEP_SETUP_REQUIRED')
-    expect((await agent.get('/api/auth/me')).body.twoStep).toEqual({ required: true, enabled: false })
+    expect((await agent.get('/api/auth/me')).body.twoStep).toEqual({ required: true, enabled: false, switchedOn: true })
 
     const setup = await agent.post('/api/auth/two-step/setup')
     expect(setup.status).toBe(200)
@@ -122,5 +123,33 @@ describe('two-step sign-in', () => {
     await password(agent, 'ceo')
     expect((await agent.post('/api/auth/logout')).status).toBe(200)
     expect(await prisma.session.count()).toBe(0)
+  })
+})
+
+describe('two-step sign-in switched off (REQUIRE_TWO_STEP=false)', () => {
+  beforeEach(() => {
+    env.REQUIRE_TWO_STEP = false
+  })
+  afterEach(() => {
+    env.REQUIRE_TWO_STEP = true
+  })
+
+  it('signs CEO and Finance in with the password alone, and forces no setup', async () => {
+    const agent = agentFor()
+    const res = await password(agent, 'ceo')
+    expect(res.body).toMatchObject({ ok: true, setUpTwoStep: false })
+    expect((await agent.get('/api/overview')).status).toBe(200)
+    expect((await agent.get('/api/auth/me')).body.twoStep).toEqual({ required: false, enabled: true, switchedOn: false })
+
+    await prisma.user.updateMany({ where: { username: 'finance' }, data: { totpSecret: null, totpEnabledAt: null } })
+    const finance = agentFor()
+    await password(finance, 'finance')
+    expect((await finance.get('/api/audit')).status).toBe(200)
+  })
+
+  it('keeps existing setups, so switching back on asks for the code again', async () => {
+    env.REQUIRE_TWO_STEP = true
+    const agent = agentFor()
+    expect((await password(agent, 'ceo')).body).toEqual({ twoStep: true })
   })
 })

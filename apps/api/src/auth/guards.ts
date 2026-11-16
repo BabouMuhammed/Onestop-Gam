@@ -40,7 +40,7 @@ export const requirePendingTwoStep: RequestHandler = async (req, _res, next) => 
 /** CEO and Finance set up two-step sign-in before anything else; until then only the account routes work. */
 export const requireTwoStepSetUp: RequestHandler = (req, _res, next) => {
   const { user } = authOf(req)
-  if (needsTwoStep(user.role) && !user.twoStepEnabled) {
+  if (env.REQUIRE_TWO_STEP && needsTwoStep(user.role) && !user.twoStepEnabled) {
     throw new HttpError(403, 'TWO_STEP_SETUP_REQUIRED', 'Set up two-step sign-in before continuing')
   }
   next()
