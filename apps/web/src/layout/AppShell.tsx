@@ -1,11 +1,10 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ClipboardCheck, KeyRound, LayoutDashboard, LogOut, Menu, Package, PackagePlus, Receipt, ScrollText, ShoppingCart, Truck, UserRound, Users, Warehouse, X, type LucideIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { ROLE_LABELS, type Permission } from '@onestop/shared'
-import { api } from '../api'
 import { divisionBrand, useSession } from '../session'
-import { cn } from '../ui'
+import { cn, ErrorAlert } from '../ui'
+import { useSignOut } from '../useSignOut'
 
 interface NavItem {
   to: string
@@ -44,14 +43,7 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
 function Navigation() {
   const { main, admin } = useNavigation()
   const { user } = useSession()
-  const queryClient = useQueryClient()
-  const signOut = useMutation({
-    mutationFn: () => api('/auth/logout', { method: 'POST' }),
-    onSettled: () => {
-      queryClient.clear()
-      queryClient.setQueryData(['me'], null)
-    },
-  })
+  const signOut = useSignOut()
 
   return (
     <div className="flex h-full flex-col">
@@ -99,9 +91,10 @@ function Navigation() {
           <KeyRound className="size-4 shrink-0" aria-hidden />
           Change password
         </NavLink>
-        <button type="button" onClick={() => signOut.mutate()} className={cn(linkClass({ isActive: false }), 'w-full')}>
+        <ErrorAlert error={signOut.error} className="my-2" />
+        <button type="button" disabled={signOut.isPending} aria-busy={signOut.isPending} onClick={() => signOut.mutate()} className={cn(linkClass({ isActive: false }), 'w-full disabled:cursor-wait disabled:opacity-70')}>
           <LogOut className="size-4 shrink-0" aria-hidden />
-          Sign out
+          {signOut.isPending ? 'Signing out…' : 'Sign out'}
         </button>
       </div>
     </div>

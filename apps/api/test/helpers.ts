@@ -3,17 +3,20 @@ import { createApp } from '../src/app'
 import { hashPassword } from '../src/auth/password'
 import { prisma } from '../src/db'
 import { env } from '../src/env'
+import { verifyTestTransaction } from './database-safety'
 
 export const app = createApp()
 export const PASSWORD = 'correct-horse-battery'
 
 /** Empty every table. Refuses to run against anything that is not a test database. */
 export async function resetDatabase() {
-  const name = new URL(env.DATABASE_URL).pathname.slice(1)
-  if (!name.endsWith('_test')) throw new Error(`Refusing to wipe "${name}": tests only run against a database ending in _test`)
-  await prisma.$executeRawUnsafe(
-    'TRUNCATE "AuditLog", "IdempotencyKey", "PriceChange", "Payment", "SaleVoid", "SaleLine", "StockReceiptReversal", "StockReceiptLine", "StockMovement", "Sale", "Customer", "StockReceipt", "Supplier", "StockLevel", "Product", "Location", "Session", "User", "Division" CASCADE',
-  )
+  if (env.NODE_ENV !== 'test' || env.DATABASE_URL !== process.env.TEST_DATABASE_URL) throw new Error('Test cleanup requires the explicitly configured test environment and URL.')
+  await prisma.$transaction(async (tx) => {
+    await verifyTestTransaction(tx, env.DATABASE_URL)
+    await tx.$executeRawUnsafe(
+      'TRUNCATE public."AuditLog", public."IdempotencyKey", public."PriceChange", public."Payment", public."SaleVoid", public."SaleLine", public."StockReceiptReversal", public."StockReceiptLine", public."StockMovement", public."Sale", public."Customer", public."StockReceipt", public."Supplier", public."StockLevel", public."Product", public."Location", public."Session", public."User", public."Division" CASCADE',
+    )
+  })
 }
 
 export interface World {
@@ -26,7 +29,7 @@ export async function seedWorld(): Promise<World> {
   await resetDatabase()
   const passwordHash = await hashPassword(PASSWORD)
   const qf = await prisma.division.create({ data: { code: 'QUALITY_FOODS', name: 'Quality Foods', skuPrefix: 'QF', nextSkuNumber: 2 } })
-  const lgb = await prisma.division.create({ data: { code: 'LE_GAYE_BI', name: 'Le Gaye Bi Group', skuPrefix: 'LGB', nextSkuNumber: 2 } })
+  const lgb = await prisma.division.create({ data: { code: 'LE_GAYE_BI', name: 'LEGAYEBI', skuPrefix: 'LGB', nextSkuNumber: 2 } })
 
   const user = (username: string, role: 'CEO' | 'FINANCE' | 'MANAGER' | 'CASHIER', divisionId: string | null) => ({
     username, name: username, role, divisionId, passwordHash, mustChangePassword: false,

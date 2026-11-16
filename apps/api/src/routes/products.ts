@@ -27,6 +27,7 @@ interface ProductRow {
   sku: string
   name: string
   unit: string
+  requiresStockReview: boolean
   sellingPrice: Prisma.Decimal | null
   costPrice: Prisma.Decimal | null
   tracksExpiry: boolean
@@ -54,7 +55,7 @@ productsRouter.get('/', requirePermission('inventory.view'), async (req, res) =>
   const having = q.filter === 'out_of_stock' ? Prisma.sql`HAVING COALESCE(SUM(sl."quantity"), 0) = 0` : Prisma.empty
 
   const base = Prisma.sql`
-    SELECT p."id", p."sku", p."name", p."unit", p."sellingPrice", p."costPrice", p."tracksExpiry", p."isActive",
+    SELECT p."id", p."sku", p."name", p."unit", p."requiresStockReview", p."sellingPrice", p."costPrice", p."tracksExpiry", p."isActive",
       COALESCE(SUM(sl."quantity"), 0) AS "quantity",
       (COUNT(sl."id") FILTER (WHERE sl."quantity" > 0))::int AS "locationCount"
     FROM "Product" p ${join}

@@ -65,6 +65,12 @@ export function ProductDetailPage() {
         }
       />
 
+      {product.unit === 'UNSPECIFIED' || product.requiresStockReview ? (
+        <Alert tone="warn" title="Business confirmation required" className="mb-4">
+          Stock is preserved as counted. Confirm its stocking unit and flagged source details before sale. No packaging conversion has been assumed.
+        </Alert>
+      ) : null}
+
       {product.sellingPrice === null && product.isActive ? (
         <Alert tone="warn" title="No selling price" className="mb-4">
           This product cannot be sold until a price is set.

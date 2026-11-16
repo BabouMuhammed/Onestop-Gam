@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Navigate, Route, Routes } from 'react-router'
+import { Navigate, Route, Routes, useLocation } from 'react-router'
 import type { Permission } from '@onestop/shared'
 import { AppShell } from './layout/AppShell'
 import { AuditLogPage } from './pages/AuditLog'
@@ -19,11 +19,23 @@ import { SalesPage } from './pages/Sales'
 import { StockCountPage } from './pages/StockCount'
 import { SuppliersPage } from './pages/Suppliers'
 import { UsersPage } from './pages/Users'
+import { WelcomePage } from './pages/Welcome'
 import { SessionProvider, useMe, useSession } from './session'
 import { Alert, Button, EmptyState, Loading } from './ui'
 
 export function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<WelcomePage />} />
+      <Route path="*" element={<AuthenticatedApp />} />
+    </Routes>
+  )
+}
+
+/** Public branding never mounts session-dependent business screens or data queries. */
+function AuthenticatedApp() {
   const me = useMe()
+  const location = useLocation()
 
   if (me.isPending) return <Loading label="Starting Onestopgam" />
   if (me.isError) {
@@ -38,7 +50,7 @@ export function App() {
       </div>
     )
   }
-  if (!me.data) return <LoginPage />
+  if (!me.data) return /^\/login\/?$/.test(location.pathname) ? <LoginPage /> : <Navigate to="/login" replace />
   if (me.data.user.mustChangePassword) return <ChangePasswordPage forced />
   if (me.data.divisions.length === 0) {
     return (
@@ -53,6 +65,7 @@ export function App() {
   return (
     <SessionProvider me={me.data}>
       <Routes>
+        <Route path="login" element={<Home />} />
         <Route element={<AppShell />}>
           <Route index element={<Home />} />
           <Route path="overview" element={<Require permission="overview.view"><OverviewPage /></Require>} />

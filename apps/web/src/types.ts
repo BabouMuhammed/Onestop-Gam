@@ -20,6 +20,7 @@ export interface Page<T> {
 }
 
 export interface ProductRow {
+  requiresStockReview: boolean
   id: string
   sku: string
   name: string
@@ -34,6 +35,7 @@ export interface ProductRow {
 }
 
 export interface Product {
+  requiresStockReview: boolean
   id: string
   sku: string
   name: string

@@ -55,7 +55,7 @@ describe('division isolation', () => {
     expect(list.body.rows.map((r: { sku: string }) => r.sku)).toEqual(['LGB-00001'])
 
     const overview = await noDivision.get('/api/overview')
-    expect(overview.body.divisions.map((d: { name: string }) => d.name)).toEqual(['Le Gaye Bi Group', 'Quality Foods'])
+    expect(overview.body.divisions.map((d: { name: string }) => d.name)).toEqual(['LEGAYEBI', 'Quality Foods'])
   })
 })
 

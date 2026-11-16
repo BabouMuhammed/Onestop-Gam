@@ -78,6 +78,10 @@ export function PosPage() {
   const customer = customers.data?.rows.find((c) => c.id === basket.customerId)
 
   const add = (product: ProductRow) => {
+    if (product.unit === 'UNSPECIFIED' || product.requiresStockReview) {
+      setNotice(`${product.name} needs stocking-unit or source-stock confirmation before it can be sold.`)
+      return
+    }
     if (product.sellingPrice === null) {
       setNotice(`${product.name} has no selling price yet. A manager has to set one before it can be sold.`)
       return

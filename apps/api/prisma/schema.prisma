@@ -23,6 +23,7 @@ enum LocationType {
 }
 
 enum Unit {
+  UNSPECIFIED
   PIECE
   PACK
   BOX
@@ -135,6 +136,10 @@ model Product {
   /// The code printed on the pack, read by a scanner at the till.
   barcode      String?
   unit         Unit     @default(PIECE)
+  /// Source-row identity, not a merged or inferred product identity.
+  openingSourceKey String?
+  openingSource Json?
+  requiresStockReview Boolean @default(false)
   /// Pieces inside one counted unit, e.g. 50 for a pack of 50. Null when counted singly.
   packSize     Int?
   /// Size attribute such as 1", DN 100 or 50mm.
@@ -157,7 +162,8 @@ model Product {
   saleLines    SaleLine[]
 
   @@unique([divisionId, sku])
-  @@unique([divisionId, name])
+  @@index([divisionId, name])
+  @@unique([divisionId, openingSourceKey])
   @@unique([divisionId, barcode])
 }
 

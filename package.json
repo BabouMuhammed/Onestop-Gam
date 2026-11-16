@@ -2,7 +2,7 @@
   "name": "onestop-gam",
   "private": true,
   "version": "0.1.0",
-  "description": "Inventory, sales, contract and finance system for Onestopgam Inc (Quality Foods and Le Gaye Bi Group)",
+  "description": "Inventory, sales, contract and finance system for Onestopgam Inc (Quality Foods and LEGAYEBI)",
   "engines": {
     "node": ">=22"
   },
@@ -16,12 +16,14 @@
     "build": "npm run build -w @onestop/api && npm run build -w @onestop/web",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test -w @onestop/api",
+    "test:unit": "npm run test:unit -w @onestop/api",
     "db:generate": "npm run db:generate -w @onestop/api",
+    "db:check:local": "node tools/check-local-db.mjs",
     "db:migrate": "npm run db:migrate -w @onestop/api",
     "db:seed": "npm run db:seed -w @onestop/api",
     "import:opening-stock": "npm run import:opening-stock -w @onestop/api --",
     "lint": "eslint .",
-    "test:tools": "python3 tools/test_convert_workbooks.py"
+    "test:tools": "python tools/test_convert_workbooks.py"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -30,5 +32,9 @@
     "globals": "^17.14.0",
     "typescript-eslint": "^8.72.2"
   },
-  "type": "module"
+  "type": "module",
+  "overrides": {
+    "esbuild": "0.28.2",
+    "minimatch": "11.0.8"
+  }
 }

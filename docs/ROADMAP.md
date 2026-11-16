@@ -45,9 +45,9 @@ Phase 3 was built for this: the till chooses each sale's id, so sending a sale t
 
 ## Decisions made
 
-- The app and printed documents use the names on the logos: **Onestopgam Inc**, **Quality Foods**, **Le Gaye Bi Group**. Division names are stored once, in the `Division` table.
-- A bracketed number in an item name, such as `(D350)` or `(900)`, is a selling price in dalasi. Thirteen Le Gaye Bi items carry one, including `(D3,500)` and `(D30,000)`.
-- Opening stock is dated on the day it was counted: 10/11/2026 for Quality Foods, 11/11/2026 for Le Gaye Bi Group.
+- The app and printed documents use the names on the logos: **Onestopgam Inc**, **Quality Foods**, **LEGAYEBI**. Division names are stored once, in the `Division` table.
+- A bracketed number in an item name, such as `(D350)` or `(900)`, is a selling price in dalasi. Thirteen LEGAYEBI items carry one, including `(D3,500)` and `(D30,000)`.
+- Opening stock is dated on the day it was counted: 10/11/2026 for Quality Foods, 11/11/2026 for LEGAYEBI.
 - `(50Pcs each)` in a name means the item is counted in packs of 50 pieces. `WHITE TAP (100 Pcs)` was left as written because its count carries the remark "ASKED IDA JALLOW".
 - Products may exist without a selling price. They can be counted and adjusted, and will not be sellable until a price is set.
 - Cost price is captured when stock is received. A product's cost price is the unit cost on its most recent receipt that still stands; the history is on the receipts. Whether to value stock at average cost instead is a Finance decision for the finance phase.
@@ -62,7 +62,7 @@ Phase 3 was built for this: the till chooses each sale's id, so sending a sale t
 
 ## Open questions
 
-1. **"BMP stock".** Shelf 1 of the Le Gaye Bi workbook is titled "BMP stock inventory". It was imported as ordinary Le Gaye Bi stock. Is it owned or accounted for separately?
+1. **"BMP stock".** Shelf 1 of the LEGAYEBI workbook is titled "BMP stock inventory". It was imported as ordinary LEGAYEBI stock. Is it owned or accounted for separately?
 2. **"(1 FAN)"** on the PEX fittings: left in the item names as written. What does it mean?
 3. **"Pan connector (400)" and "(200)"**, and the three "Basin tap" prices: kept as separate products. How do they differ?
 4. **Units of sale.** Are items sold in a different unit from the one they are counted in (a carton counted, pieces sold)?

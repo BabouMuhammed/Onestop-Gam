@@ -25,6 +25,10 @@
   --color-brand-hover: #082c74;
   --color-brand-soft: #e8eef9;
 
+  /* Sampled from the official company mark at pixel (62, 21), dominant green cluster. */
+  --color-onestop-green: #167716;
+  --color-onestop-green-hover: #126312;
+
   /* Status. Used only where something needs attention or has succeeded. */
   --color-ok: #1a6b2f;
   --color-ok-soft: #e6f2e9;
@@ -97,6 +101,72 @@
   font-variant-numeric: tabular-nums;
   text-align: right;
   white-space: nowrap;
+}
+
+/* Keep the existing reception imagery and reserve its signage before the entry links. */
+.welcome-page {
+  --welcome-padding: clamp(1rem, 2svh, 1.5rem);
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+  padding: var(--welcome-padding);
+  background: #cdbba5;
+}
+.welcome-backdrop {
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 auto;
+  height: 100svh;
+  background: url('/brand/onestopgam-background-desktop.png') center / cover no-repeat;
+}
+/* Source signage ends at 72.4% of the 1586x992 desktop image. Account for
+   cover's centered crop so content never covers it, even in a short window. */
+.welcome-signage-space {
+  flex: 1 0 auto;
+  min-height: calc(50svh + max(22.4svh, 14.011vw) + .5rem - var(--welcome-padding));
+}
+.welcome-controls { display: grid; width: min(100%, 512px); align-self: center; justify-items: center; gap: .5rem; }
+.welcome-business-panels { display: grid; width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: .75rem; }
+.welcome-business-panel {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) 12px;
+  align-items: center;
+  gap: .5rem;
+  min-height: 60px;
+  padding: .375rem .5rem;
+  border: 1px solid #7a9779;
+  border-radius: var(--radius-lg);
+  background: rgb(19 55 34 / .95);
+  color: #fff;
+  box-shadow: 0 1px 4px rgb(36 30 18 / .08);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+.welcome-business-panel:hover { border-color: #b7e5aa; box-shadow: 0 2px 6px rgb(36 30 18 / .12); }
+.welcome-panel-logo { width: 84px; height: 44px; padding: 2px; border-radius: var(--radius-sm); background: #fff; object-fit: contain; }
+.welcome-panel-name { display: block; font-size: .875rem; font-weight: 600; line-height: 1.3; }
+.welcome-panel-subtitle { display: block; margin-top: .125rem; color: #e3eddf; font-size: .75rem; line-height: 1.4; white-space: nowrap; }
+.welcome-business-panel > svg { width: 12px; height: 12px; color: #b7e5aa; }
+.welcome-page .welcome-start { width: 224px; height: 44px; min-height: 44px; justify-content: space-between; padding-inline: 1.25rem; border-radius: var(--radius-md); background: var(--color-onestop-green); color: #fff; font-size: .8125rem; letter-spacing: .06em; transition: background-color 160ms ease; }
+.welcome-page .welcome-start:hover { background: var(--color-onestop-green-hover); }
+.welcome-page :focus-visible { outline: 3px solid var(--color-onestop-green); outline-offset: 3px; box-shadow: 0 0 0 6px #fff; }
+@media (max-aspect-ratio: 1/1) {
+  .welcome-backdrop { background-image: url('/brand/onestopgam-background-portrait.png'); }
+  /* Reserve the bottom of the photographed tagline (63% of 916x1717). */
+  .welcome-signage-space { min-height: calc(50svh + max(13svh, 24.368vw) + .75rem - var(--welcome-padding)); }
+}
+@media (max-width: 599px) {
+  .welcome-business-panels { grid-template-columns: minmax(0, 1fr); }
+  .welcome-controls { width: min(100%, 320px); }
+}
+/* Keep the CTA below both entries even in short desktop browser windows. */
+@media (min-width: 1024px) and (max-height: 700px) {
+  .welcome-page { --welcome-padding: .75rem; }
+  .welcome-business-panel { min-height: 56px; padding-block: .25rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome-business-panel, .welcome-page .welcome-start { transition: none; }
 }
 
 /* Printing a receipt: only the element marked .print-area reaches the paper,

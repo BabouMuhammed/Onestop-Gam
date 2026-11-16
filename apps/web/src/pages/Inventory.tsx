@@ -71,6 +71,7 @@ export function InventoryPage() {
       cell: (p) => (
         <Link to={`/inventory/${p.id}`} onClick={(e) => e.stopPropagation()} className="font-medium text-ink hover:text-brand hover:underline">
           {p.name}
+          {p.requiresStockReview ? <span className="ml-2 text-sm font-normal text-ink-2">Confirmation required</span> : null}
         </Link>
       ),
     },

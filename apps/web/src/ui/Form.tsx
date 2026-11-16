@@ -1,4 +1,4 @@
-import { useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes, type ComponentProps } from 'react'
+import { useId, useState, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes, type ComponentProps } from 'react'
 import { cn } from './cn'
 
 const control =
@@ -39,6 +39,37 @@ export function Field({ label, error, hint, className, children }: FieldProps) {
 
 export function Input({ className, ...rest }: ComponentProps<'input'>) {
   return <input className={cn(control, 'h-control [@media(pointer:coarse)]:h-10', className)} {...rest} />
+}
+
+export function PasswordInput({ id, className, disabled, ...rest }: Omit<ComponentProps<'input'>, 'type'>) {
+  const generatedId = useId()
+  const inputId = id ?? generatedId
+  const [visible, setVisible] = useState(false)
+
+  return (
+    <div className="relative">
+      <Input
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
+        {...rest}
+        id={inputId}
+        disabled={disabled}
+        type={visible ? 'text' : 'password'}
+        className={cn('pr-16', className)}
+      />
+      <button
+        type="button"
+        aria-label={visible ? 'Hide password' : 'Show password'}
+        aria-controls={inputId}
+        disabled={disabled}
+        onClick={() => setVisible((current) => !current)}
+        className="absolute inset-y-0 right-0 rounded-r-md px-3 text-sm font-medium text-ink-2 hover:text-ink disabled:opacity-50"
+      >
+        {visible ? 'Hide' : 'Show'}
+      </button>
+    </div>
+  )
 }
 
 export function Select({ className, children, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {

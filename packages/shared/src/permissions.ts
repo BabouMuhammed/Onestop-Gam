@@ -53,10 +53,11 @@ export function permissionsFor(role: Role): Permission[] {
   return (Object.keys(PERMISSION_TABLE) as Permission[]).filter((p) => can(role, p))
 }
 
-export const UNITS = ['PIECE', 'PACK', 'BOX', 'BAG', 'SACHET', 'ROLL', 'CYLINDER', 'CARTON', 'BOTTLE', 'KG', 'LITRE'] as const
+export const UNITS = ['UNSPECIFIED', 'PIECE', 'PACK', 'BOX', 'BAG', 'SACHET', 'ROLL', 'CYLINDER', 'CARTON', 'BOTTLE', 'KG', 'LITRE'] as const
 export type Unit = (typeof UNITS)[number]
 
 export const UNIT_LABELS: Record<Unit, { one: string; many: string }> = {
+  UNSPECIFIED: { one: 'unconfirmed unit', many: 'units (unconfirmed)' },
   PIECE: { one: 'pc', many: 'pcs' },
   PACK: { one: 'pack', many: 'packs' },
   BOX: { one: 'box', many: 'boxes' },
@@ -72,6 +73,7 @@ export const UNIT_LABELS: Record<Unit, { one: string; many: string }> = {
 
 /** Full unit names for form choices and detail rows. */
 export const UNIT_NAMES: Record<Unit, string> = {
+  UNSPECIFIED: 'Unspecified — confirmation required',
   PIECE: 'Pieces', PACK: 'Packs', BOX: 'Boxes', BAG: 'Bags', SACHET: 'Sachets', ROLL: 'Rolls',
   CYLINDER: 'Cylinders', CARTON: 'Cartons', BOTTLE: 'Bottles', KG: 'Kilograms', LITRE: 'Litres',
 }

@@ -181,7 +181,7 @@ salesRouter.post('/', requirePermission('sale.create'), async (req, res) => {
           input.customerId ? tx.customer.findFirst({ where: { id: input.customerId, divisionId, isActive: true } }) : null,
           tx.product.findMany({
             where: { id: { in: productIds }, divisionId, isActive: true },
-            select: { id: true, sku: true, name: true, sellingPrice: true, costPrice: true },
+            select: { id: true, sku: true, name: true, sellingPrice: true, costPrice: true, unit: true, requiresStockReview: true },
           }),
           tx.sale.findUnique({ where: { id: input.id }, select: { id: true } }),
         ])
@@ -192,6 +192,10 @@ salesRouter.post('/', requirePermission('sale.create'), async (req, res) => {
 
         const lines = input.lines.map((line, position) => {
           const product = products.find((p) => p.id === line.productId)!
+          if (product.unit === 'UNSPECIFIED' || product.requiresStockReview) {
+            throw new HttpError(409, product.unit === 'UNSPECIFIED' ? 'UNIT_UNCONFIRMED' : 'STOCK_REVIEW_REQUIRED',
+              `${product.name} requires stocking-unit or source-stock confirmation before sale.`, { [`lines.${position}.quantity`]: 'Business confirmation required' })
+          }
           if (product.sellingPrice === null) {
             throw new HttpError(409, 'NO_PRICE', `${product.name} has no selling price. A manager has to set one before it can be sold.`, {
               [`lines.${position}.unitPrice`]: 'No selling price',

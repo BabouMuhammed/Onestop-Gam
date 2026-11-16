@@ -1,8 +1,8 @@
-import { existsSync } from 'node:fs'
 import { defineConfig } from 'prisma/config'
+import { loadRootEnvironment } from './src/environment'
 
 // The Prisma CLI does not read .env by itself; load the repository-level file if present.
-if (existsSync('../../.env')) process.loadEnvFile('../../.env')
+loadRootEnvironment()
 
 export default defineConfig({
   schema: 'prisma/schema.prisma',
