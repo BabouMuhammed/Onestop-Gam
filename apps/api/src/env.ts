@@ -4,8 +4,12 @@ const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().default(4000),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
-  // The browser origin of the web app. On Render the public URL is supplied as RENDER_EXTERNAL_URL.
-  WEB_ORIGIN: z.string().default(process.env.RENDER_EXTERNAL_URL ?? 'http://localhost:5173'),
+  // The browser origin(s) of the web app, comma-separated, e.g. the Render address and a Vercel
+  // address that forwards /api here. On Render the public URL is supplied as RENDER_EXTERNAL_URL.
+  WEB_ORIGIN: z
+    .string()
+    .default(process.env.RENDER_EXTERNAL_URL ?? 'http://localhost:5173')
+    .transform((v) => v.split(',').map((o) => o.trim().replace(/\/+$/, '')).filter(Boolean)),
   // When set, the API also serves the built web app from this folder, so one service hosts both.
   WEB_DIST: z.string().optional(),
   // Number of reverse proxies in front of the API (1 on Render), so client addresses and HTTPS are read correctly.

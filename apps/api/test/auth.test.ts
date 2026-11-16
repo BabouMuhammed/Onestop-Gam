@@ -70,6 +70,15 @@ describe('request protection', () => {
     const res = await post('/api/auth/login').set('origin', 'https://evil.example').send({ username: 'ceo', password: PASSWORD })
     expect(res.status).toBe(403)
   })
+
+  it('accepts every configured web address, and only those', async () => {
+    // WEB_ORIGIN in vitest.config.ts lists two addresses, the second with a trailing slash.
+    for (const origin of ['http://localhost:5173', 'https://onestop-demo.vercel.app']) {
+      const res = await post('/api/auth/login').set('origin', origin).send({ username: 'qf.cashier', password: 'wrong-password-123' })
+      expect(res.status, origin).toBe(401)
+    }
+    expect((await post('/api/auth/login').set('origin', 'https://onestop-demo.vercel.app.evil.example').send({})).status).toBe(403)
+  })
 })
 
 describe('temporary passwords', () => {

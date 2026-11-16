@@ -14,7 +14,7 @@ import { readSession, type AuthContext } from './session'
 export const csrfGuard: RequestHandler = (req, _res, next) => {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next()
   const origin = req.get('origin')
-  if (req.get('x-onestop-request') !== '1' || (origin && origin !== env.WEB_ORIGIN)) {
+  if (req.get('x-onestop-request') !== '1' || (origin && !env.WEB_ORIGIN.includes(origin))) {
     return next(forbidden('This request did not come from the Onestopgam app'))
   }
   next()
