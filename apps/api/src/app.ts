@@ -11,6 +11,7 @@ import { auditRouter } from './routes/audit'
 import { contractsRouter } from './routes/contracts'
 import { customersRouter } from './routes/customers'
 import { damagesRouter } from './routes/damages'
+import { dashboardRouter } from './routes/dashboard'
 import { authRouter } from './routes/auth'
 import { locationsRouter } from './routes/locations'
 import { overviewRouter } from './routes/overview'
@@ -41,6 +42,7 @@ export function createApp() {
   const api = express.Router()
   api.use(requireAuth, requirePasswordChanged)
   api.use('/overview', overviewRouter)
+  api.use('/dashboard', dashboardRouter)
   api.use('/locations', locationsRouter)
   api.use('/products', productsRouter)
   api.use('/stock', stockRouter)

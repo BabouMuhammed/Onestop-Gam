@@ -308,3 +308,18 @@ export interface ContractDetail {
   }[]
   payments: { id: string; method: PaymentMethod; amount: string; reference: string | null; receivedOn: string; note: string | null; by: string | null }[]
 }
+
+export interface DashboardData {
+  generatedAt: string
+  days: number
+  divisions: { id: string; name: string; code: string }[]
+  headline: Record<'today' | 'week' | 'month', { current: Record<string, { total: string; count: number }>; previous: Record<string, { total: string; count: number }> }>
+  money: { collectedMonth: string; creditOwed: string; contractOwed: string; contractDeliveredMonth: string; contractDeliveriesMonth: number; activeContracts: number }
+  /** Absent for roles that may not see costs. */
+  margin?: { revenue: string; costedRevenue: string; profit: string }
+  damages: { count: number; value?: string; pending: number }
+  daily: ({ date: string } & Record<string, string>)[]
+  topProducts: { productId: string; name: string; unit: Unit; divisionId: string; quantity: string; revenue: string; tillRevenue: string }[]
+  paymentMix: { method: PaymentMethod; amount: string }[]
+  owing: { customerId: string; name: string; divisionId: string; credit: string; contracts: string; total: string }[]
+}
