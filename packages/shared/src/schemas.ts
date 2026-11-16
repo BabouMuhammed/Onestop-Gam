@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { DAMAGE_REASONS, LOCATION_TYPES, PAYMENT_METHODS, ROLES, UNITS } from './permissions'
+import { CONTRACT_STATUSES, CONTRACT_TYPES, DAMAGE_REASONS, LOCATION_TYPES, PAYMENT_METHODS, ROLES, UNITS } from './permissions'
 
 /**
  * Request shapes. The API validates every request against these; the web forms
@@ -270,3 +270,91 @@ export const damageDecisionSchema = z
 export type DamageDecisionInput = z.infer<typeof damageDecisionSchema>
 
 export const damageListQuerySchema = listQuerySchema.extend({ status: z.enum(['all', 'pending', 'approved', 'rejected']).default('all') })
+
+const notInFuture = dateText.refine((v) => v <= todayText(), 'The date cannot be in the future')
+const positiveQuantity = quantityText.refine((q) => Number(q) > 0, 'Enter a quantity above zero')
+
+export const contractItemSchema = z.object({
+  productId: z.string().uuid(),
+  agreedPrice: moneyText,
+  /** Required on fixed supply and project contracts; left out on ongoing supply. */
+  agreedQuantity: positiveQuantity.optional(),
+})
+
+export const contractSchema = z
+  .object({
+    customerId: z.string().uuid('Choose a customer'),
+    type: z.enum(CONTRACT_TYPES),
+    title: trimmed(120),
+    startDate: dateText,
+    endDate: dateText.optional(),
+    siteAddress: optionalText(200),
+    notes: optionalText(500),
+    items: z.array(contractItemSchema).min(1, 'Add at least one item').max(200, 'At most 200 items'),
+    idempotencyKey,
+  })
+  .superRefine((c, ctx) => {
+    if (c.endDate && c.endDate < c.startDate) ctx.addIssue({ code: 'custom', path: ['endDate'], message: 'Ends before it starts' })
+    if (new Set(c.items.map((i) => i.productId)).size !== c.items.length) ctx.addIssue({ code: 'custom', path: ['items'], message: 'Each item once' })
+    c.items.forEach((item, i) => {
+      if (c.type === 'ONGOING_SUPPLY' && item.agreedQuantity) {
+        ctx.addIssue({ code: 'custom', path: ['items', i, 'agreedQuantity'], message: 'Ongoing supply agrees prices only' })
+      }
+      if (c.type !== 'ONGOING_SUPPLY' && !item.agreedQuantity) {
+        ctx.addIssue({ code: 'custom', path: ['items', i, 'agreedQuantity'], message: 'Enter the agreed quantity' })
+      }
+    })
+  })
+export type ContractInput = z.infer<typeof contractSchema>
+
+export const contractUpdateSchema = z.object({
+  status: z.enum(CONTRACT_STATUSES).optional(),
+  title: trimmed(120).optional(),
+  endDate: dateText.nullable().optional(),
+  siteAddress: optionalText(200),
+  notes: optionalText(500),
+})
+
+export const contractOrderSchema = z
+  .object({
+    orderedOn: notInFuture,
+    requiredBy: dateText.optional(),
+    reference: optionalText(60),
+    note: optionalText(300),
+    lines: z.array(z.object({ contractItemId: z.string().uuid(), quantity: positiveQuantity })).min(1, 'Order at least one item').max(200),
+    idempotencyKey,
+  })
+  .refine((o) => new Set(o.lines.map((l) => l.contractItemId)).size === o.lines.length, { path: ['lines'], message: 'Each item once' })
+export type ContractOrderInput = z.infer<typeof contractOrderSchema>
+
+export const contractDeliverySchema = z
+  .object({
+    orderId: z.string().uuid(),
+    deliveredOn: notInFuture,
+    receivedBy: optionalText(80),
+    note: optionalText(300),
+    lines: z.array(z.object({ orderLineId: z.string().uuid(), quantity: positiveQuantity })).min(1, 'Deliver at least one item').max(200),
+    idempotencyKey,
+  })
+  .refine((d) => new Set(d.lines.map((l) => l.orderLineId)).size === d.lines.length, { path: ['lines'], message: 'Each item once' })
+export type ContractDeliveryInput = z.infer<typeof contractDeliverySchema>
+
+export const contractPaymentSchema = z
+  .object({
+    method: z.enum(PAYMENT_METHODS),
+    amount: positiveMoney,
+    reference: optionalText(60),
+    receivedOn: notInFuture,
+    note: optionalText(300),
+    idempotencyKey,
+  })
+  .refine((p) => p.method === 'CASH' || !!p.reference, { path: ['reference'], message: 'Enter the reference' })
+export type ContractPaymentInput = z.infer<typeof contractPaymentSchema>
+
+/** Cancelling an order's remainder or reversing a delivery: a reason is always recorded. */
+export const reasonSchema = z.object({ reason: trimmed(300), idempotencyKey })
+
+export const contractListQuerySchema = z.object({
+  status: z.enum(['ACTIVE', 'COMPLETED', 'CANCELLED', 'all']).default('ACTIVE'),
+  search: z.string().trim().max(80).optional(),
+})

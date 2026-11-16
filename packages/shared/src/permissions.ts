@@ -43,6 +43,10 @@ const PERMISSION_TABLE = {
   'damage.report': ['CEO', 'MANAGER', 'CASHIER'],
   'damage.view': ['CEO', 'FINANCE', 'MANAGER', 'CASHIER'],
   'damage.decide': ['CEO', 'MANAGER'],
+  // Contracts carry agreed prices and amounts owed, so cashiers do not see them.
+  'contract.view': ['CEO', 'FINANCE', 'MANAGER'],
+  'contract.manage': ['CEO', 'MANAGER'],
+  'contract.collect': ['CEO', 'MANAGER'],
   'user.manage': ['CEO'],
   'audit.view': ['CEO', 'FINANCE'],
 } as const satisfies Record<string, readonly Role[]>
@@ -91,7 +95,7 @@ export const LOCATION_TYPE_LABELS: Record<LocationType, string> = {
   OTHER: 'Other',
 }
 
-export const MOVEMENT_TYPES = ['OPENING', 'ADJUSTMENT', 'COUNT', 'RECEIPT', 'RECEIPT_REVERSAL', 'SALE', 'SALE_VOID', 'DAMAGE'] as const
+export const MOVEMENT_TYPES = ['OPENING', 'ADJUSTMENT', 'COUNT', 'RECEIPT', 'RECEIPT_REVERSAL', 'SALE', 'SALE_VOID', 'DAMAGE', 'CONTRACT_DELIVERY', 'CONTRACT_DELIVERY_REVERSAL'] as const
 export type MovementType = (typeof MOVEMENT_TYPES)[number]
 
 export const MOVEMENT_TYPE_LABELS: Record<MovementType, string> = {
@@ -103,6 +107,8 @@ export const MOVEMENT_TYPE_LABELS: Record<MovementType, string> = {
   SALE: 'Sold',
   SALE_VOID: 'Sale voided',
   DAMAGE: 'Damaged, written off',
+  CONTRACT_DELIVERY: 'Contract delivery',
+  CONTRACT_DELIVERY_REVERSAL: 'Contract delivery reversed',
 }
 
 export const PAYMENT_METHODS = ['CASH', 'MOBILE_MONEY', 'BANK_TRANSFER', 'CHEQUE'] as const
@@ -135,3 +141,20 @@ export const DAMAGE_REASON_LABELS: Record<DamageReason, string> = {
   MISSING: 'Missing',
   OTHER: 'Other',
 }
+
+export const CONTRACT_TYPES = ['FIXED_SUPPLY', 'ONGOING_SUPPLY', 'PROJECT'] as const
+export type ContractType = (typeof CONTRACT_TYPES)[number]
+export const CONTRACT_TYPE_LABELS: Record<ContractType, string> = {
+  FIXED_SUPPLY: 'Fixed supply',
+  ONGOING_SUPPLY: 'Ongoing supply',
+  PROJECT: 'Project',
+}
+/** One line each, shown when choosing a type. */
+export const CONTRACT_TYPE_HINTS: Record<ContractType, string> = {
+  FIXED_SUPPLY: 'Agreed items and quantities over a period, delivered in instalments.',
+  ONGOING_SUPPLY: 'Agreed prices; the customer orders whatever they need, when they need it.',
+  PROJECT: 'Materials agreed for one job or site, delivered as the work goes on.',
+}
+export const CONTRACT_STATUSES = ['ACTIVE', 'COMPLETED', 'CANCELLED'] as const
+export type ContractStatus = (typeof CONTRACT_STATUSES)[number]
+export const CONTRACT_STATUS_LABELS: Record<ContractStatus, string> = { ACTIVE: 'Active', COMPLETED: 'Completed', CANCELLED: 'Cancelled' }

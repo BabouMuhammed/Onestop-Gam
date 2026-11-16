@@ -4,6 +4,9 @@ import type { Permission } from '@onestop/shared'
 import { AppShell } from './layout/AppShell'
 import { AuditLogPage } from './pages/AuditLog'
 import { ChangePasswordPage } from './pages/ChangePassword'
+import { ContractDetailPage, DeliveryNotePage } from './pages/ContractDetail'
+import { ContractNewPage } from './pages/ContractNew'
+import { ContractsPage } from './pages/Contracts'
 import { CustomersPage } from './pages/Customers'
 import { DamagesPage } from './pages/Damages'
 import { InventoryPage } from './pages/Inventory'
@@ -60,6 +63,10 @@ export function App() {
           <Route path="pos" element={<Require permission="sale.create"><PosPage /></Require>} />
           <Route path="sales" element={<Require permission="sale.view"><SalesPage /></Require>} />
           <Route path="sales/:id" element={<Require permission="sale.view"><SaleDetailPage /></Require>} />
+          <Route path="contracts" element={<Require permission="contract.view"><ContractsPage /></Require>} />
+          <Route path="contracts/new" element={<Require permission="contract.manage"><ContractNewPage /></Require>} />
+          <Route path="contracts/:id" element={<Require permission="contract.view"><ContractDetailPage /></Require>} />
+          <Route path="contracts/:id/deliveries/:deliveryId" element={<Require permission="contract.view"><DeliveryNotePage /></Require>} />
           <Route path="damages" element={<Require permission="damage.view"><DamagesPage /></Require>} />
           <Route path="customers" element={<Require permission="customer.view"><CustomersPage /></Require>} />
           <Route path="inventory" element={<Require permission="inventory.view"><InventoryPage /></Require>} />

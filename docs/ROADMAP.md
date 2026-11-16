@@ -14,7 +14,14 @@ Suppliers, stock receipts with cost price captured per line, optional batch numb
 
 Customers, the till, split payments (cash, mobile money, bank transfer, cheque), credit for approved customers with later collection, voids with refunds, printable receipts, product barcodes.
 
-## Phase 4: Selling while offline
+## Phase 4: Damages and contracts (done, ahead of the order planned)
+
+Brought forward for the demo on 17/11/2026.
+
+- Damage reports, written off only when a manager who did not report them (or the CEO) approves. The loss is valued at the cost price of the day.
+- Contracts of three types (fixed supply, ongoing supply, project) with agreed items, orders, deliveries that take stock, delivery notes, delivery reversals, and collections.
+
+## Phase 5: Selling while offline
 
 - Sales recorded on the device when the connection is down, and sent when it returns
 - What happens when two tills sold the same last item while offline
@@ -22,22 +29,22 @@ Customers, the till, split payments (cash, mobile money, bank transfer, cheque),
 
 Phase 3 was built for this: the till chooses each sale's id, so sending a sale twice records it once.
 
-## Phase 5: Cash-up
+## Phase 6: Cash-up
 
 - Cashier shift open and close, with cash counted against sales
 - Returns of part of a sale
 
-## Phase 6: Damages and transfers
+## Phase 7: Transfers
 
-- Damages and write-offs, with a manager's approval
-- Transfers between locations
+- Moving stock between locations in one step
 
-## Phase 7: Contracts and orders
+## Phase 8: Contract follow-ups
 
-- Fixed supply, ongoing supply and project-based contracts, for both divisions
-- Customer orders, stock issue, deliveries and collections against a contract
+- Invoices raised from deliveries, and statements per customer
+- Changing agreed prices through a recorded amendment instead of a new contract
+- Choosing the location a delivery is taken from
 
-## Phase 8: Finance and reports
+## Phase 9: Finance and reports
 
 - Invoices, payments and outstanding balances
 - Reports and exports for each role
@@ -59,6 +66,10 @@ Phase 3 was built for this: the till chooses each sale's id, so sending a sale t
 - Full offline selling is wanted. It is its own phase, after Phase 3.
 - At the till, stock is taken from the location holding the most of the item, then the next. A void puts it back where it came from.
 - No tax or discount lines yet. Nothing in the brief asks for them.
+- A contract's agreed items and prices are fixed once it is created. A change in price means a new contract, so what was agreed stays on record.
+- Contract collections are capped: up to the contract value where quantities are agreed (so deposits can be taken), otherwise up to what has been delivered and not yet paid.
+- Contract deliveries take stock from the location holding the most of the item, like the till.
+- Damage reports are made against one location. A report waits for a decision; nothing leaves stock until it is approved.
 
 ## Open questions
 

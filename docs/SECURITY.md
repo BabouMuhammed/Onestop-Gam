@@ -13,7 +13,7 @@ What protects the system today, where each rule lives, and what is still open.
 | Reading another division's data | The division comes from the signed-in user for managers and cashiers, never from the request. Every query is filtered by it; another division's record answers 404 | `auth/guards.ts`, every route |
 | Acting beyond a role | One permission table, enforced by the API on every route. The web app only hides what the API would refuse | `packages/shared/src/permissions.ts` |
 | Negative or double-counted stock | Row lock per product and location inside a transaction; a database CHECK rejects negative quantities; idempotency keys make a repeated submission a no-op | `apps/api/src/stock.ts`, migration `integrity_rules` |
-| Tampering with history | Stock ledger, price history, posted receipts, sales, payments and audit log are append-only: database triggers reject UPDATE and DELETE for every user, and no API route offers them | migration `integrity_rules`, `suppliers_and_receiving` |
+| Tampering with history | Stock ledger, price history, posted receipts, sales, payments, damage reports, contract items, orders, deliveries and contract payments, and the audit log are append-only: database triggers reject UPDATE and DELETE for every user, and no API route offers them | migration `integrity_rules`, `suppliers_and_receiving` |
 | Wrong totals or costs | Line costs and receipt totals are computed by the server from quantity and unit cost; a total sent by the client is ignored. Cost prices are left out of every response to a cashier | `routes/receipts.ts`, `routes/products.ts` |
 | Wrong prices at the till | The server sells at its own price. The till's price is only compared, and a difference stops the sale. Totals, change and balances are computed by the server | `routes/sales.ts` |
 | Voiding to hide theft | A cashier cannot void. A manager cannot void a sale they rang up; another manager or the CEO must. A void keeps the sale, restores the stock and writes a refund row per payment | `routes/sales.ts` |
@@ -43,6 +43,9 @@ What protects the system today, where each rule lives, and what is still open.
 | Report damage | Yes | No | Yes | Yes |
 | See damage reports | All | All | All | Own |
 | Approve or reject damage (writes stock off) | Yes | No | Not their own | No |
+| See contracts, agreed prices and balances | Yes | Yes | Yes | No |
+| Set up contracts, place orders, record and reverse deliveries | Yes | No | Yes | No |
+| Record payments on contracts | Yes | No | Yes | No |
 | Manage users | Yes | No | No | No |
 | Read the audit log | Yes | Yes | No | No |
 

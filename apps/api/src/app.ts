@@ -8,6 +8,7 @@ import { csrfGuard, requireAuth, requirePasswordChanged } from './auth/guards'
 import { env } from './env'
 import { errorHandler, unknownRoute } from './http'
 import { auditRouter } from './routes/audit'
+import { contractsRouter } from './routes/contracts'
 import { customersRouter } from './routes/customers'
 import { damagesRouter } from './routes/damages'
 import { authRouter } from './routes/auth'
@@ -48,6 +49,7 @@ export function createApp() {
   api.use('/customers', customersRouter)
   api.use('/sales', salesRouter)
   api.use('/damages', damagesRouter)
+  api.use('/contracts', contractsRouter)
   api.use('/users', usersRouter)
   api.use('/audit', auditRouter)
   app.use('/api', api)
