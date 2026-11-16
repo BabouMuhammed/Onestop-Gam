@@ -68,8 +68,13 @@ export const productUpdateSchema = productSchema
   .partial()
   .extend({ isActive: z.boolean().optional() })
 
-export const priceSchema = z.object({ sellingPrice: moneyText })
+export const priceSchema = z.object({ sellingPrice: moneyText, reason: z.string().trim().max(300, 'At most 300 characters').optional() })
 export type PriceInput = z.infer<typeof priceSchema>
+
+export const priceDecisionSchema = z
+  .object({ approved: z.boolean(), note: z.string().trim().max(300, 'At most 300 characters').optional(), idempotencyKey })
+  .refine((d) => d.approved || !!d.note, { path: ['note'], message: 'Say why the change is rejected' })
+export type PriceDecisionInput = z.infer<typeof priceDecisionSchema>
 
 export const stockCountSchema = z.object({
   locationId: z.string().uuid(),
@@ -112,6 +117,8 @@ export const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).max(100000).default(1),
   pageSize: z.coerce.number().int().min(1).max(200).default(50),
 })
+
+export const priceRequestListQuerySchema = listQuerySchema.extend({ status: z.enum(['pending', 'all']).default('pending') })
 
 export const productListQuerySchema = listQuerySchema.extend({
   search: z.string().trim().max(80).optional(),

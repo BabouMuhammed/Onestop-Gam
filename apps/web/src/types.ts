@@ -71,6 +71,22 @@ export interface ProductDetail {
   levels: { locationId: string; location: string; type: LocationType; quantity: string }[]
   movements: Movement[]
   priceChanges: { id: string; oldPrice: string | null; newPrice: string; createdAt: string; by: string | null }[]
+  /** A manager's change waiting for the CEO. */
+  pendingPrice: { id: string; newPrice: string; reason: string | null; createdAt: string; by: string | null } | null
+}
+
+export interface PriceRequestRow {
+  id: string
+  divisionId: string
+  createdAt: string
+  product: { id: string; sku: string; name: string; unit: Unit; currentPrice: string | null; costPrice: string | null }
+  oldPrice: string
+  newPrice: string
+  reason: string | null
+  requestedBy: string | null
+  status: 'pending' | 'approved' | 'rejected'
+  decidedBy: string | null
+  decisionNote: string | null
 }
 
 export interface LocationRow {
@@ -313,6 +329,8 @@ export interface ContractDetail {
 }
 
 export interface DashboardData {
+  /** Only for those who approve prices. */
+  pendingPriceRequests?: number
   generatedAt: string
   days: number
   divisions: { id: string; name: string; code: string }[]

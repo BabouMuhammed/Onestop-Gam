@@ -48,6 +48,7 @@ export function OverviewPage() {
   // Stock problems are named per division, so each link opens the list behind its number.
   const many = (figures.data?.divisions.length ?? 0) > 1
   const attention = [
+    ...(d?.pendingPriceRequests ? [{ key: 'prices', count: d.pendingPriceRequests, label: `price ${d.pendingPriceRequests === 1 ? 'change' : 'changes'} waiting for your approval`, to: '/admin/price-approvals', divisionId: null as string | null }] : []),
     ...(d && d.damages.pending > 0 ? [{ key: 'damages', count: d.damages.pending, label: 'damage reports waiting for a decision', to: '/damages', divisionId: null as string | null }] : []),
     ...(figures.data?.divisions ?? []).flatMap((v) => [
       { key: `price-${v.divisionId}`, count: v.withoutPrice, label: `${many ? `${v.name} ` : ''}products without a selling price`, to: '/inventory?filter=no_price', divisionId: v.divisionId },

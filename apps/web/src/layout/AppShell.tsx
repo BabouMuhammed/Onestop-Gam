@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ClipboardCheck, KeyRound, LayoutDashboard, FileText, LogOut, Menu, PackageX, Package, PackagePlus, Receipt, ScrollText, ShoppingCart, Truck, UserRound, Users, Warehouse, X, type LucideIcon } from 'lucide-react'
+import { ClipboardCheck, KeyRound, LayoutDashboard, FileText, LogOut, Menu, PackageX, Package, PackagePlus, Receipt, ScrollText, ShoppingCart, Truck, UserRound, Users, Warehouse, X, type LucideIcon, BadgeCheck } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { ROLE_LABELS, type Permission } from '@onestop/shared'
@@ -34,6 +34,7 @@ function useNavigation(): { heading?: string; items: NavItem[] }[] {
   const admin: NavItem[] = [
     { to: '/admin/users', label: 'Users', icon: Users, permission: 'user.manage' },
     { to: '/admin/audit', label: 'Audit log', icon: ScrollText, permission: 'audit.view' },
+    { to: '/admin/price-approvals', label: 'Price approvals', icon: BadgeCheck, permission: 'price.approve' },
   ]
   return [
     { items: main.slice(0, 1) },
