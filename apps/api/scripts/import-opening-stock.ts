@@ -45,6 +45,7 @@ async function importFile(path: string) {
     return
   }
 
+  console.log(`${division.name}: importing ${data.items.length} stock lines. This can take several minutes over the internet...`)
   const summary = await prisma.$transaction(
     async (tx) => {
       const locations = new Map<string, string>()
@@ -99,7 +100,9 @@ async function importFile(path: string) {
       })
       return { products: products.size, locations: locations.size, rows: data.items.length, priced }
     },
-    { timeout: 300_000, maxWait: 10_000 },
+    // Generous: from a laptop to a hosted database every line is several slow round trips,
+    // and the whole division is saved together or not at all.
+    { timeout: 30 * 60_000, maxWait: 30_000 },
   )
   console.log(
     `${division.name}: ${summary.products} products, ${summary.locations} locations, ${summary.rows} stock lines, ${summary.priced} with a price.`,
