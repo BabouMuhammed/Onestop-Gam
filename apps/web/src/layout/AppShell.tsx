@@ -5,7 +5,7 @@ import { NavLink, Outlet, useLocation } from 'react-router'
 import { ROLE_LABELS, type Permission } from '@onestop/shared'
 import { api } from '../api'
 import { divisionBrand, useSession } from '../session'
-import { cn } from '../ui'
+import { cn, Select } from '../ui'
 
 interface NavItem {
   to: string
@@ -15,14 +15,14 @@ interface NavItem {
 }
 
 /** Navigation is built from what the role may do, so nobody sees a link they cannot use. */
-function useNavigation(): { main: NavItem[]; admin: NavItem[] } {
+function useNavigation(): { heading?: string; items: NavItem[] }[] {
   const { can, user } = useSession()
   const main: NavItem[] = [
+    { to: '/overview', label: 'Dashboard', icon: LayoutDashboard, permission: 'overview.view' },
     { to: '/pos', label: 'Sell', icon: ShoppingCart, permission: 'sale.create' },
     { to: '/sales', label: user.role === 'CASHIER' ? 'My sales' : 'Sales', icon: Receipt, permission: 'sale.view' },
     { to: '/customers', label: 'Customers', icon: UserRound, permission: 'customer.view' },
     { to: '/contracts', label: 'Contracts', icon: FileText, permission: 'contract.view' },
-    { to: '/overview', label: 'Dashboard', icon: LayoutDashboard, permission: 'overview.view' },
     { to: '/inventory', label: user.role === 'CASHIER' ? 'Product lookup' : 'Inventory', icon: Package, permission: 'inventory.view' },
     { to: '/receiving', label: 'Receiving', icon: PackagePlus, permission: 'receipt.view' },
     { to: '/stock-count', label: 'Stock count', icon: ClipboardCheck, permission: 'stock.count' },
@@ -34,7 +34,13 @@ function useNavigation(): { main: NavItem[]; admin: NavItem[] } {
     { to: '/admin/users', label: 'Users', icon: Users, permission: 'user.manage' },
     { to: '/admin/audit', label: 'Audit log', icon: ScrollText, permission: 'audit.view' },
   ]
-  return { main: main.filter((i) => can(i.permission)), admin: admin.filter((i) => can(i.permission)) }
+  return [
+    { items: main.slice(0, 1) },
+    { heading: 'Selling', items: main.slice(1, 5) },
+    { heading: 'Stock', items: main.slice(5, 9) },
+    { heading: 'Setup', items: main.slice(9) },
+    { heading: 'Admin', items: admin },
+  ].map((group) => ({ ...group, items: group.items.filter((i) => can(i.permission)) })).filter((group) => group.items.length > 0)
 }
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -44,7 +50,7 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
   )
 
 function Navigation() {
-  const { main, admin } = useNavigation()
+  const groups = useNavigation()
   const { user } = useSession()
   const queryClient = useQueryClient()
   const signOut = useMutation({
@@ -63,23 +69,11 @@ function Navigation() {
       </div>
 
       <nav aria-label="Main" className="flex-1 overflow-y-auto p-2">
-        <ul className="space-y-0.5">
-          {main.map((item) => (
-            <li key={item.to}>
-              <NavLink to={item.to} className={linkClass}>
-                <item.icon className="size-4 shrink-0" aria-hidden />
-                {item.label}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
-        {admin.length > 0 ? (
-          <>
-            <p className="mt-4 mb-1 px-2.5 text-sm font-medium text-ink-3" id="nav-admin">
-              Administration
-            </p>
-            <ul className="space-y-0.5" aria-labelledby="nav-admin">
-              {admin.map((item) => (
+        {groups.map((group, index) => (
+          <div key={group.heading ?? 'dashboard'}>
+            {group.heading ? <p className="mt-4 mb-1 px-2.5 text-sm font-medium text-ink-3" id={`nav-${index}`}>{group.heading}</p> : null}
+            <ul className="space-y-0.5" aria-labelledby={group.heading ? `nav-${index}` : undefined}>
+              {group.items.map((item) => (
                 <li key={item.to}>
                   <NavLink to={item.to} className={linkClass}>
                     <item.icon className="size-4 shrink-0" aria-hidden />
@@ -88,8 +82,8 @@ function Navigation() {
                 </li>
               ))}
             </ul>
-          </>
-        ) : null}
+          </div>
+        ))}
       </nav>
 
       <div className="shrink-0 border-t border-line p-2">
@@ -115,31 +109,27 @@ function Navigation() {
  * managers and cashiers see their own division and no switch.
  */
 function DivisionBar() {
-  const { division, divisions, setDivision, canSwitchDivision } = useSession()
+  const { division, divisions, setDivision, canSwitchDivision, dashboardScope, setDashboardScope } = useSession()
+  const dashboard = useLocation().pathname === '/overview'
+  const scope = dashboard ? dashboardScope : division.id
   const brand = divisionBrand(division.code)
   return (
     <div className="flex min-w-0 flex-1 items-center gap-3">
-      <img src={brand.logo} alt="" className="h-8 w-auto max-w-24 shrink-0 object-contain" />
+      <img src={dashboard && scope === 'all' ? '/brand/onestopgam-mark.png' : dashboard ? divisionBrand(divisions.find((d) => d.id === scope)?.code ?? division.code).logo : brand.logo} alt="" className="h-8 w-auto max-w-24 shrink-0 object-contain" />
       <div className={cn('min-w-0', canSwitchDivision && 'hidden sm:block')}>
-        <p className="text-xs whitespace-nowrap text-ink-3">{canSwitchDivision ? 'Working in' : 'Division'}</p>
-        <p className="truncate font-semibold text-ink">{division.name}</p>
+        <p className="text-xs whitespace-nowrap text-ink-3">{dashboard && canSwitchDivision ? 'Dashboard scope' : canSwitchDivision ? 'Working in' : 'Division'}</p>
+        <p className="truncate font-semibold text-ink">{dashboard && canSwitchDivision ? (scope === 'all' ? 'Both divisions' : divisions.find((d) => d.id === scope)?.name) : division.name}</p>
       </div>
       {canSwitchDivision ? (
-        <div role="group" aria-label="Switch division" className="flex min-w-0 rounded-md border border-line-strong p-0.5 sm:ml-3">
-          {divisions.map((d) => (
-            <button
-              key={d.id}
-              type="button"
-              aria-pressed={d.id === division.id}
-              onClick={() => setDivision(d.id)}
-              className={cn(
-                'h-7 truncate rounded-sm px-2.5 text-sm [@media(pointer:coarse)]:h-9',
-                d.id === division.id ? 'bg-brand font-medium text-white' : 'text-ink-2 hover:bg-sunken',
-              )}
-            >
-              {d.name}
-            </button>
-          ))}
+        <div className="min-w-0 flex-1 sm:ml-3 sm:max-w-56">
+          <Select aria-label="Switch division" value={scope} onChange={(event) => {
+            const id = event.target.value
+            if (id === 'all' && dashboard) setDashboardScope(id)
+            else setDivision(id)
+          }}>
+            {dashboard ? <option value="all">Both divisions</option> : null}
+            {divisions.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+          </Select>
         </div>
       ) : null}
     </div>

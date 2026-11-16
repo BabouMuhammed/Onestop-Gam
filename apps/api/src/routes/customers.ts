@@ -16,7 +16,8 @@ interface CustomerRow {
   creditAllowed: boolean
   isActive: boolean
   saleCount: number
-  balance: Prisma.Decimal
+  creditOwed: Prisma.Decimal
+  contractOwed: Prisma.Decimal
 }
 
 const escapeLike = (text: string) => text.replace(/[\\%_]/g, (ch) => `\\${ch}`)
@@ -31,7 +32,7 @@ customersRouter.get('/', requirePermission('customer.view'), async (req, res) =>
     const like = `%${escapeLike(q.search)}%`
     where.push(Prisma.sql`(c."name" ILIKE ${like} OR c."phone" ILIKE ${like})`)
   }
-  const owing = q.filter === 'owing' ? Prisma.sql`WHERE "balance" > 0` : Prisma.empty
+  const owing = q.filter === 'owing' ? Prisma.sql`WHERE "creditOwed" + "contractOwed" > 0` : Prisma.empty
   const rows = await prisma.$queryRaw<CustomerRow[]>`
     SELECT * FROM (
       SELECT c."id", c."name", c."phone", c."address", c."notes", c."creditAllowed", c."isActive",
@@ -40,13 +41,23 @@ customersRouter.get('/', requirePermission('customer.view'), async (req, res) =>
           SELECT SUM(s."total" - COALESCE((SELECT SUM(p."amount") FROM "Payment" p WHERE p."saleId" = s."id"), 0))
           FROM "Sale" s
           WHERE s."customerId" = c."id" AND NOT EXISTS (SELECT 1 FROM "SaleVoid" v WHERE v."saleId" = s."id")
-        ), 0) AS "balance"
+        ), 0) AS "creditOwed",
+        COALESCE((SELECT SUM(GREATEST(
+          COALESCE((SELECT SUM(cd."value") FROM "ContractDelivery" cd
+            WHERE cd."contractId" = ct."id" AND NOT EXISTS (
+              SELECT 1 FROM "ContractDeliveryReversal" r WHERE r."deliveryId" = cd."id")), 0)
+          - COALESCE((SELECT SUM(cp."amount") FROM "ContractPayment" cp WHERE cp."contractId" = ct."id"), 0), 0))
+          FROM "Contract" ct WHERE ct."customerId" = c."id" AND ct."divisionId" = c."divisionId"), 0) AS "contractOwed"
       FROM "Customer" c
       WHERE ${Prisma.join(where, ' AND ')}
     ) listed ${owing}
     ORDER BY "name" ASC
     LIMIT 500`
-  res.json({ rows })
+  const showContracts = can(authOf(req).user.role, 'contract.view')
+  res.json({ rows: rows.map(({ creditOwed, contractOwed, ...customer }) => {
+    const owed = creditOwed.plus(contractOwed).toString()
+    return { ...customer, creditOwed: creditOwed.toString(), ...(showContracts ? { contractOwed: contractOwed.toString() } : {}), owed, balance: owed }
+  }) })
 })
 
 const blankToNull = <T extends Record<string, unknown>>(input: T): T =>

@@ -176,6 +176,9 @@ export interface CustomerRow {
   creditAllowed: boolean
   isActive: boolean
   saleCount: number
+  creditOwed: string
+  contractOwed?: string
+  owed: string
   balance: string
 }
 

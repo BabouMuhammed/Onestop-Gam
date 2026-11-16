@@ -62,3 +62,8 @@ Rules for new screens:
 | Cashier | Product lookup (opens with the search box focused) |
 
 Later phases add Sales, Stock receiving, Customers, Contracts, Finance and Reports to the roles that use them.
+
+The sidebar starts with Dashboard, followed by Selling, Stock, Setup and Admin groups.
+Groups without permitted links are hidden. The top bar is the only division switch.
+On Dashboard, CEO and Finance can also choose Both divisions; this dashboard scope is
+held separately from the working division and does not change the division used by other pages.

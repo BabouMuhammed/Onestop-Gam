@@ -51,6 +51,11 @@ What protects the system today, where each rule lives, and what is still open.
 
 Finance is read-only for now. Whether Finance should record payments is an open question for the finance phase.
 
+Customer balances combine unpaid credit sales and delivered contract value less collections.
+Reversed deliveries and voided sales are excluded; deposits cannot make a contract balance negative
+or offset another contract's debt. Cashiers see the total owed and credit-sales component, but
+the contract breakdown remains restricted to roles with `contract.view`.
+
 ## Still open
 
 - **This repository is public.** Anyone can read the code. Keep `.env`, workbooks and price lists out of it, or make the repository private.
