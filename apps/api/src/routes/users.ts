@@ -4,7 +4,7 @@ import { audit } from '../audit'
 import { authOf, requirePermission } from '../auth/guards'
 import { hashPassword, temporaryPassword } from '../auth/password'
 import { prisma } from '../db'
-import { conflict, idParam, notFound, parse } from '../http'
+import { conflict, forbidden, idParam, notFound, parse } from '../http'
 
 export const usersRouter = Router()
 usersRouter.use(requirePermission('user.manage'))
@@ -12,7 +12,7 @@ usersRouter.use(requirePermission('user.manage'))
 // The password hash is never selected, so it can never be sent to a browser.
 const PUBLIC_FIELDS = {
   id: true, username: true, name: true, role: true, divisionId: true, isActive: true,
-  mustChangePassword: true, lastLoginAt: true, lockedUntil: true, createdAt: true,
+  mustChangePassword: true, lastLoginAt: true, lockedUntil: true, createdAt: true, totpEnabledAt: true,
 } as const
 
 usersRouter.get('/', async (_req, res) => {
@@ -89,4 +89,27 @@ usersRouter.post('/:id/reset-password', async (req, res) => {
     })
   })
   res.json({ temporaryPassword: password })
+})
+
+/**
+ * Turn off someone's two-step sign-in, e.g. after a lost phone. They set it up again at
+ * their next sign-in. Nobody can reset their own: a stolen session could otherwise remove it.
+ */
+usersRouter.post('/:id/reset-two-step', async (req, res) => {
+  const target = await prisma.user.findUnique({ where: { id: idParam(req) }, select: PUBLIC_FIELDS })
+  if (!target) throw notFound('User')
+  if (target.id === authOf(req).user.id) throw forbidden('You cannot reset your own two-step sign-in')
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id: target.id }, data: { totpSecret: null, totpPendingSecret: null, totpEnabledAt: null, totpLastStep: null } })
+    await tx.twoStepRecoveryCode.deleteMany({ where: { userId: target.id } })
+    await tx.session.deleteMany({ where: { userId: target.id } })
+    await audit(tx, req, {
+      action: 'user.two_step_reset',
+      entity: 'User',
+      entityId: target.id,
+      divisionId: target.divisionId,
+      summary: `Reset the two-step sign-in of ${target.username}`,
+    })
+  })
+  res.json({ ok: true })
 })

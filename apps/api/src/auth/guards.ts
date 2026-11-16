@@ -1,5 +1,5 @@
 import type { Request, RequestHandler } from 'express'
-import { can, type Permission } from '@onestop/shared'
+import { can, type Permission, needsTwoStep } from '@onestop/shared'
 import { prisma } from '../db'
 import { env } from '../env'
 import { forbidden, HttpError } from '../http'
@@ -24,7 +24,25 @@ export const csrfGuard: RequestHandler = (req, _res, next) => {
 export const requireAuth: RequestHandler = async (req, _res, next) => {
   const auth = await readSession(req)
   if (!auth) throw new HttpError(401, 'UNAUTHENTICATED', 'Sign in to continue')
+  if (auth.twoStepPending) throw new HttpError(401, 'TWO_STEP_REQUIRED', 'Enter the code from your authenticator app')
   req.auth = auth
+  next()
+}
+
+/** Only for entering the code: a session whose password was accepted and that waits for it. */
+export const requirePendingTwoStep: RequestHandler = async (req, _res, next) => {
+  const auth = await readSession(req)
+  if (!auth || !auth.twoStepPending) throw new HttpError(401, 'UNAUTHENTICATED', 'Sign in again to continue')
+  req.auth = auth
+  next()
+}
+
+/** CEO and Finance set up two-step sign-in before anything else; until then only the account routes work. */
+export const requireTwoStepSetUp: RequestHandler = (req, _res, next) => {
+  const { user } = authOf(req)
+  if (needsTwoStep(user.role) && !user.twoStepEnabled) {
+    throw new HttpError(403, 'TWO_STEP_SETUP_REQUIRED', 'Set up two-step sign-in before continuing')
+  }
   next()
 }
 

@@ -399,3 +399,14 @@ export const shiftListQuerySchema = listQuerySchema
     status: z.enum(['all', 'open', 'closed', 'difference']).default('all'),
   })
   .refine(rangeInOrder, rangeMessage)
+
+/** A 6-digit code from the authenticator app, or a recovery code such as "k7m2-q9xa". */
+export const twoStepCodeSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .max(40, 'Enter the 6-digit code, or a recovery code')
+    .transform((v) => v.replace(/\s+/g, '').toLowerCase())
+    .refine((v) => /^\d{6}$/.test(v) || /^[a-z0-9]{4}-?[a-z0-9]{4}$/.test(v), 'Enter the 6-digit code, or a recovery code'),
+})
+export type TwoStepCodeInput = z.infer<typeof twoStepCodeSchema>

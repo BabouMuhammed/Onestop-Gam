@@ -163,3 +163,7 @@ export const CONTRACT_TYPE_HINTS: Record<ContractType, string> = {
 export const CONTRACT_STATUSES = ['ACTIVE', 'COMPLETED', 'CANCELLED'] as const
 export type ContractStatus = (typeof CONTRACT_STATUSES)[number]
 export const CONTRACT_STATUS_LABELS: Record<ContractStatus, string> = { ACTIVE: 'Active', COMPLETED: 'Completed', CANCELLED: 'Cancelled' }
+
+/** Roles that must use two-step sign-in (password plus a code from an authenticator app). */
+export const TWO_STEP_ROLES: readonly Role[] = ['CEO', 'FINANCE']
+export const needsTwoStep = (role: Role) => TWO_STEP_ROLES.includes(role)

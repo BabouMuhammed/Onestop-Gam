@@ -4,7 +4,7 @@ import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import express from 'express'
 import helmet from 'helmet'
-import { csrfGuard, requireAuth, requirePasswordChanged } from './auth/guards'
+import { csrfGuard, requireAuth, requirePasswordChanged, requireTwoStepSetUp } from './auth/guards'
 import { env } from './env'
 import { errorHandler, unknownRoute } from './http'
 import { auditRouter } from './routes/audit'
@@ -43,7 +43,7 @@ export function createApp() {
 
   // Everything below needs a signed-in user whose password is not a temporary one.
   const api = express.Router()
-  api.use(requireAuth, requirePasswordChanged)
+  api.use(requireAuth, requirePasswordChanged, requireTwoStepSetUp)
   api.use('/overview', overviewRouter)
   api.use('/dashboard', dashboardRouter)
   api.use('/locations', locationsRouter)

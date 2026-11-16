@@ -21,6 +21,7 @@ One system for Onestopgam Inc's two divisions, **Quality Foods** and **Le Gaye B
 - **Barcodes.** A product can carry the code printed on its pack.
 - **Prices.** Products can exist without a selling price. A manager sets the first price; changing a price that is already set goes to the CEO for approval, and the old price stays until then. Every change is logged.
 - **CSV export.** Sales, Receiving, Damages, Customers, Contracts, Inventory and the Audit log export what is on screen, with the same filters, to a CSV file that opens in Excel (up to 10,000 rows). Dates are DD/MM/YYYY and amounts are plain numbers.
+- **Two-step sign-in.** The CEO and Finance see both divisions' money, so they also enter a code from an authenticator app on their phone. They set it up at first sign-in and get eight one-time recovery codes; the CEO can reset it for someone who loses their phone.
 - **Users and audit log.** The CEO manages accounts; CEO and Finance can read the audit log.
 - **Opening stock import.** Loads a converted stock-count workbook as a division's starting stock.
 

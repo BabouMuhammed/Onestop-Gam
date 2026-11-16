@@ -35,6 +35,10 @@ services:
         value: ../web/dist
       - key: TRUST_PROXY
         value: "1"
+      # Encrypts two-step sign-in secrets. Render generates a random value once; do not change it
+      # later, or CEO and Finance have to set up two-step sign-in again.
+      - key: TOTP_ENCRYPTION_KEY
+        generateValue: true
       # First administrator. Entered in the Render dashboard, never committed.
       # The password (at least 10 characters) must be changed at first sign-in.
       - key: SEED_ADMIN_USERNAME

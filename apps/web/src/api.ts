@@ -52,7 +52,9 @@ export async function api<T>(path: string, { method = 'GET', body, division }: O
   if (response.ok) return data as T
 
   const error = (data as { error?: { code?: string; message?: string; fields?: Record<string, string> } } | null)?.error
-  if (response.status === 401 && !path.startsWith('/auth/login')) onSignedOut()
+  // A wrong code, or a session still waiting for one, is part of signing in, not a sign-out.
+  const signingIn = path.startsWith('/auth/login') || path.startsWith('/auth/two-step')
+  if (response.status === 401 && !signingIn && error?.code !== 'TWO_STEP_REQUIRED') onSignedOut()
   throw new ApiError(response.status, error?.code ?? 'UNKNOWN', error?.message ?? 'The request failed', error?.fields)
 }
 
