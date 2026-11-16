@@ -1,13 +1,12 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link } from 'react-router'
 import { formatDateTime, formatGMD } from '@onestop/shared'
 import { api, query } from '../api'
-import { DailySalesChart, PaymentMix, StatTile, TopProductsChart } from '../components/Dashboard'
-import { MovementChange, movementColumns } from '../components/movements'
-import { divisionBrand, useSession } from '../session'
-import type { DashboardData, DivisionFigures, LedgerRow, Page } from '../types'
-import { cn, DataTable, EmptyState, ErrorAlert, Flag, Loading, PageHeader, Section, Select, type Column } from '../ui'
+import { DailySalesChart, StatTile, TopProductsChart } from '../components/Dashboard'
+import { useSession } from '../session'
+import type { DashboardData, DivisionFigures } from '../types'
+import { DataTable, EmptyState, ErrorAlert, Loading, PageHeader, Section, Select, type Column } from '../ui'
 
 const RANGES = [
   { days: 7, label: 'Last 7 days' },
@@ -15,27 +14,8 @@ const RANGES = [
   { days: 90, label: 'Last 90 days' },
 ] as const
 
-interface Measure {
-  label: string
-  /** Which inventory filter shows the records behind the number. */
-  filter?: 'no_price' | 'out_of_stock'
-  /** A non-zero value here is something to act on. */
-  attention?: boolean
-  value: (d: DivisionFigures) => number | string
-}
-
-const MEASURES: Measure[] = [
-  { label: 'Products', value: (d) => d.products },
-  { label: 'Without a selling price', filter: 'no_price', attention: true, value: (d) => d.withoutPrice },
-  { label: 'Out of stock', filter: 'out_of_stock', attention: true, value: (d) => d.outOfStock },
-  { label: 'Storage locations', value: (d) => d.locations },
-  { label: 'Last stock count', value: (d) => (d.lastCountAt ? formatDateTime(d.lastCountAt) : 'None recorded') },
-  { label: 'Last stock movement', value: (d) => (d.lastMovementAt ? formatDateTime(d.lastMovementAt) : 'None recorded') },
-]
-
 export function OverviewPage() {
   const { division, setDivision, canSwitchDivision, divisions, can } = useSession()
-  const navigate = useNavigate()
   // CEO and Finance see both divisions together by default, and can narrow to one.
   const [chosen, setChosen] = useState<'all' | string>('all')
   const scope = canSwitchDivision ? chosen : division.id
@@ -53,36 +33,6 @@ export function OverviewPage() {
     queryKey: ['overview', scope],
     queryFn: () => api<{ divisions: DivisionFigures[] }>('/overview', { division: scope }),
   })
-  const recent = useQuery({
-    queryKey: ['movements', scope, 'recent'],
-    queryFn: () => api<Page<LedgerRow>>(`/stock/movements${query({ pageSize: 10 })}`, { division: scope }),
-  })
-
-  const open = (divisionId: string, filter: Measure['filter']) => {
-    setDivision(divisionId)
-    navigate(`/inventory${query({ filter })}`)
-  }
-
-  const ledgerColumns: Column<LedgerRow>[] = [
-    movementColumns.when,
-    ...(canSwitchDivision
-      ? [{ key: 'division', header: 'Division', hideBelow: 'md', cell: (r) => divisions.find((d) => d.id === r.divisionId)?.name } satisfies Column<LedgerRow>]
-      : []),
-    {
-      key: 'product',
-      header: 'Product',
-      cell: (r) => (
-        <Link to={`/inventory/${r.product.id}`} onClick={() => setDivision(r.divisionId)} className="font-medium text-brand hover:underline">
-          {r.product.name}
-        </Link>
-      ),
-    },
-    { ...movementColumns.type, hideBelow: 'sm' },
-    { ...movementColumns.location, hideBelow: 'md' },
-    { key: 'change', header: 'Change', numeric: true, cell: (r) => <MovementChange delta={r.quantityDelta} unit={r.product.unit} /> },
-    { ...movementColumns.by, hideBelow: 'lg' },
-  ]
-
   const d = dashboard.data
   const sum = (rec: Record<string, { total: string; count: number }> | undefined, key: 'total' | 'count') =>
     rec ? Object.values(rec).reduce((s, v) => s + Number(v[key]), 0) : 0
@@ -91,12 +41,18 @@ export function OverviewPage() {
     previous: sum(d?.headline[period].previous, 'total'),
     count: sum(d?.headline[period].current, 'count'),
   })
-  const split = (period: 'today' | 'week' | 'month') =>
-    d && d.divisions.length > 1 ? d.divisions.map((v) => `${v.name} ${formatGMD(d.headline[period].current[v.id]?.total ?? '0')}`).join(' · ') : null
   const salesWord = (n: number) => `${n} sale${n === 1 ? '' : 's'}`
   const owed = d ? Number(d.money.creditOwed) + Number(d.money.contractOwed) : 0
   const marginPct = d?.margin && Number(d.margin.costedRevenue) > 0 ? (Number(d.margin.profit) / Number(d.margin.costedRevenue)) * 100 : null
   const coverage = d?.margin && Number(d.margin.revenue) > 0 ? Math.round((Number(d.margin.costedRevenue) / Number(d.margin.revenue)) * 100) : null
+
+  const withoutPrice = figures.data?.divisions.reduce((total, item) => total + item.withoutPrice, 0) ?? 0
+  const outOfStock = figures.data?.divisions.reduce((total, item) => total + item.outOfStock, 0) ?? 0
+  const attention = [
+    { count: d?.damages.pending ?? 0, label: 'damage reports waiting for a decision', to: '/damages' },
+    { count: withoutPrice, label: 'products without a selling price', to: '/inventory?filter=no_price' },
+    { count: outOfStock, label: 'products out of stock', to: '/inventory?filter=out_of_stock' },
+  ].filter((item) => item.count > 0)
 
   return (
     <>
@@ -120,6 +76,7 @@ export function OverviewPage() {
       />
 
       <ErrorAlert error={dashboard.error} className="mb-3" />
+      <ErrorAlert error={figures.error} className="mb-3" />
       {dashboard.isPending ? (
         <Loading />
       ) : d ? (
@@ -142,7 +99,6 @@ export function OverviewPage() {
                 )
               })}
             </div>
-            {split('month') ? <p className="mt-1.5 text-sm text-ink-3">This month by division: {split('month')}</p> : null}
           </section>
 
           <section aria-label="Money" className="mt-3 grid gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
@@ -159,18 +115,18 @@ export function OverviewPage() {
               <StatTile label="Damages this month" value={String(d.damages.count)} sub={`${d.damages.pending} waiting for a decision`} />
             )}
           </section>
-          {d.margin ? (
-            <p className="mt-1.5 text-sm text-ink-3">
-              Damages written off this month: {d.damages.count}
-              {d.damages.value !== undefined && Number(d.damages.value) > 0 ? ` (${formatGMD(d.damages.value)} at cost)` : ''}
-              {d.damages.pending > 0 ? (
-                <>
-                  {' · '}
-                  <Link to="/damages" className="text-warn underline">
-                    {d.damages.pending} waiting for a decision
+          {attention.length > 0 ? (
+            <p className="mt-1.5 text-sm text-warn">
+              Needs attention: {attention.map((item, index) => (
+                <span key={item.to}>
+                  {index > 0 ? ' · ' : null}
+                  <Link to={item.to} className="underline underline-offset-2" onClick={() => {
+                    if (scope !== 'all' && item.to.startsWith('/inventory')) setDivision(scope)
+                  }}>
+                    {item.count} {item.label}
                   </Link>
-                </>
-              ) : null}
+                </span>
+              ))}
             </p>
           ) : null}
 
@@ -202,96 +158,24 @@ export function OverviewPage() {
                 )}
               </div>
             </Section>
-            <Section title="Money in by payment method">
-              <div className="rounded-lg border border-line bg-surface p-4">
-                <PaymentMix data={d} />
-              </div>
-            </Section>
-            <Section title="Who owes the most">
-              <DataTable
-                label="Customers who owe the most"
-                columns={[
-                  { key: 'name', header: 'Customer', cell: (o) => <span className="font-medium">{o.name}</span> },
-                  ...(d.divisions.length > 1 ? [{ key: 'division', header: 'Division', hideBelow: 'md', className: 'text-ink-2', cell: (o: DashboardData['owing'][number]) => d.divisions.find((v) => v.id === o.divisionId)?.name } satisfies Column<DashboardData['owing'][number]>] : []),
-                  { key: 'credit', header: 'Credit sales', numeric: true, hideBelow: 'sm', cell: (o) => formatGMD(o.credit) },
-                  ...(can('contract.view') ? [{ key: 'contracts', header: 'Contracts', numeric: true, hideBelow: 'sm', cell: (o: DashboardData['owing'][number]) => formatGMD(o.contracts) } satisfies Column<DashboardData['owing'][number]>] : []),
-                  { key: 'total', header: 'Owes', numeric: true, cell: (o) => <span className="font-medium">{formatGMD(o.total)}</span> },
-                ]}
-                rows={d.owing}
-                rowKey={(o) => o.customerId}
-                empty={<EmptyState title="Nobody owes money">Credit sales and contract deliveries not yet paid show here.</EmptyState>}
-              />
-            </Section>
           </div>
+          <Section title="Who owes the most">
+            <DataTable
+              label="Customers who owe the most"
+              columns={[
+                { key: 'name', header: 'Customer', cell: (o) => <span className="font-medium">{o.name}</span> },
+                ...(d.divisions.length > 1 ? [{ key: 'division', header: 'Division', hideBelow: 'md', className: 'text-ink-2', cell: (o: DashboardData['owing'][number]) => d.divisions.find((v) => v.id === o.divisionId)?.name } satisfies Column<DashboardData['owing'][number]>] : []),
+                { key: 'credit', header: 'Credit sales', numeric: true, hideBelow: 'sm', cell: (o) => formatGMD(o.credit) },
+                ...(can('contract.view') ? [{ key: 'contracts', header: 'Contracts', numeric: true, hideBelow: 'sm', cell: (o: DashboardData['owing'][number]) => formatGMD(o.contracts) } satisfies Column<DashboardData['owing'][number]>] : []),
+                { key: 'total', header: 'Owes', numeric: true, cell: (o) => <span className="font-medium">{formatGMD(o.total)}</span> },
+              ]}
+              rows={d.owing}
+              rowKey={(o) => o.customerId}
+              empty={<EmptyState title="Nobody owes money">Credit sales and contract deliveries not yet paid show here.</EmptyState>}
+            />
+          </Section>
         </>
       ) : null}
-
-      <Section title="Inventory">
-        <ErrorAlert error={figures.error} className="mb-3" />
-        {figures.isPending ? (
-          <Loading />
-        ) : figures.data ? (
-          <div className={cn('overflow-x-auto rounded-lg border border-line bg-surface', figures.data.divisions.length === 1 && 'max-w-xl')}>
-            <table className="w-full border-collapse text-base">
-              <thead>
-                <tr className="border-b border-line bg-sunken">
-                  <th scope="col" className="h-row px-3 text-left text-sm font-medium text-ink-2">
-                    Measure
-                  </th>
-                  {figures.data.divisions.map((d) => (
-                    <th key={d.divisionId} scope="col" className="h-row px-3 py-1.5 text-right text-sm font-medium text-ink">
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className={cn('size-2 rounded-full', divisionBrand(d.code).markClass)} aria-hidden />
-                        {d.name}
-                      </span>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {MEASURES.map((measure) => (
-                  <tr key={measure.label} className="border-b border-line last:border-b-0">
-                    <th scope="row" className="h-row px-3 py-1.5 text-left font-normal text-ink">
-                      {measure.label}
-                    </th>
-                    {figures.data.divisions.map((d) => {
-                      const value = measure.value(d)
-                      const flagged = measure.attention && typeof value === 'number' && value > 0
-                      return (
-                        <td key={d.divisionId} className={cn('h-row px-3 py-1.5 text-right', typeof value === 'number' && 'num')}>
-                          {measure.filter && flagged ? (
-                            <button type="button" onClick={() => open(d.divisionId, measure.filter)} className="rounded-sm font-medium text-warn underline decoration-warn/40 underline-offset-2 hover:decoration-warn">
-                              {value}
-                              <span className="sr-only"> {measure.label.toLowerCase()} in {d.name}: view list</span>
-                            </button>
-                          ) : typeof value === 'number' ? (
-                            value
-                          ) : (
-                            <Flag tone="muted">{value}</Flag>
-                          )}
-                        </td>
-                      )
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : null}
-        <p className="mt-2 text-sm text-ink-3">Highlighted numbers need action. Select one to see the products behind it.</p>
-      </Section>
-
-      <Section title="Recent stock movements">
-        <ErrorAlert error={recent.error} className="mb-3" />
-        <DataTable
-          label="Recent stock movements"
-          columns={ledgerColumns}
-          rows={recent.data?.rows}
-          rowKey={(r) => r.id}
-          loading={recent.isPending}
-          empty={<EmptyState title="No stock has moved yet">Adjustments and stock counts appear here as they are recorded.</EmptyState>}
-        />
-      </Section>
     </>
   )
 }

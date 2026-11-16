@@ -2,7 +2,7 @@ import { ArrowDownRight, ArrowUpRight } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis, type TooltipContentProps } from 'recharts'
 import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent'
-import { formatDate, formatGMD, formatQuantityWithUnit, PAYMENT_METHOD_LABELS, PAYMENT_METHODS } from '@onestop/shared'
+import { formatDate, formatGMD, formatQuantityWithUnit } from '@onestop/shared'
 import type { DashboardData } from '../types'
 import { cn } from '../ui'
 
@@ -189,29 +189,6 @@ export function TopProductsChart({ data }: { data: DashboardData }) {
         empty="Nothing sold in this period."
       />
     </div>
-  )
-}
-
-/** Money in by payment method: one bar per method, sharing a scale. */
-export function PaymentMix({ data }: { data: DashboardData }) {
-  const amounts = PAYMENT_METHODS.map((m) => ({ method: m, amount: Number(data.paymentMix.find((p) => p.method === m)?.amount ?? 0) }))
-  const max = Math.max(...amounts.map((a) => a.amount), 1)
-  const total = amounts.reduce((s, a) => s + a.amount, 0)
-  return (
-    <ul className="space-y-2.5" aria-label="Money in by payment method">
-      {amounts.map((a) => (
-        <li key={a.method} className="grid grid-cols-[7rem_minmax(0,1fr)_6.5rem] items-center gap-3">
-          <span className="text-ink-2">{PAYMENT_METHOD_LABELS[a.method]}</span>
-          <span className="h-3 rounded-r-[4px] bg-transparent" aria-hidden>
-            <span className="block h-full rounded-r-[4px]" style={{ width: `${a.amount > 0 ? Math.max((a.amount / max) * 100, 1.5) : 0}%`, background: SERIES[0] }} />
-          </span>
-          <span className="num text-right">
-            {formatGMD(a.amount)}
-            <span className="block text-xs text-ink-3">{total > 0 ? `${Math.round((a.amount / total) * 100)}%` : ''}</span>
-          </span>
-        </li>
-      ))}
-    </ul>
   )
 }
 
