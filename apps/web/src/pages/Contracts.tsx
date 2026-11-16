@@ -3,6 +3,7 @@ import { Plus, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { CONTRACT_STATUS_LABELS, CONTRACT_TYPE_LABELS, formatDate, formatGMD, todayText, type ContractStatus } from '@onestop/shared'
+import { ExportButton } from '../components/ExportButton'
 import { api, query } from '../api'
 import { useSession } from '../session'
 import type { ContractRow } from '../types'
@@ -87,7 +88,12 @@ export function ContractsPage() {
       <PageHeader
         title="Contracts"
         detail={rows ? `${rows.length} shown, ${formatGMD(owed)} owed for deliveries` : `Supply agreements of ${division.name}`}
-        actions={can('contract.manage') ? <ButtonLink to="/contracts/new" variant="primary" icon={<Plus className="size-4" aria-hidden />}>New contract</ButtonLink> : undefined}
+        actions={
+          <>
+            <ExportButton path={`/contracts${query({ status, search })}`} />
+            {can('contract.manage') ? <ButtonLink to="/contracts/new" variant="primary" icon={<Plus className="size-4" aria-hidden />}>New contract</ButtonLink> : null}
+          </>
+        }
       />
       <div className="mb-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_14rem]">
         <div className="relative">

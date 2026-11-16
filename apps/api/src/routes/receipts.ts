@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto'
 import { Router } from 'express'
-import { formatDate, formatGMD, receiptListQuerySchema, receiptReverseSchema, receiptSchema } from '@onestop/shared'
+import { csvNumber, formatDate, formatDateTime, formatGMD, receiptListQuerySchema, receiptReverseSchema, receiptSchema } from '@onestop/shared'
 import { audit } from '../audit'
 import { authOf, divisionOf, requirePermission } from '../auth/guards'
 import { Decimal, type Prisma, prisma, type Tx } from '../db'
 import { conflict, dayRange, HttpError, idParam, notFound, parse } from '../http'
+import { exportPaging, sendCsv, wantsCsv } from '../export'
 import { changeStock, once } from '../stock'
 
 export const receiptsRouter = Router()
@@ -30,7 +31,7 @@ async function namesOf(userIds: (string | null | undefined)[]) {
 
 receiptsRouter.get('/', requirePermission('receipt.view'), async (req, res) => {
   const divisionId = await divisionOf(req)
-  const q = parse(receiptListQuerySchema, req.query)
+  const q = exportPaging(req, parse(receiptListQuerySchema, req.query))
   const where: Prisma.StockReceiptWhereInput = {
     divisionId,
     supplierId: q.supplierId,
@@ -53,6 +54,25 @@ receiptsRouter.get('/', requirePermission('receipt.view'), async (req, res) => {
     prisma.stockReceipt.count({ where }),
   ])
   const nameOf = await namesOf(rows.map((r) => r.userId))
+  if (wantsCsv(req)) {
+    await sendCsv(req, res, {
+      name: 'receiving',
+      what: 'goods-received notes',
+      divisionId,
+      header: ['Number', 'Received', 'Supplier', 'Supplier invoice', 'Lines', 'Total cost (D)', 'Reversed', 'Received by'],
+      rows: rows.map((r) => [
+        r.number,
+        formatDate(dateOnly(r.receivedOn)),
+        r.supplier.name,
+        r.reference,
+        r._count.lines,
+        csvNumber(r.totalCost.toFixed(2)),
+        r.reversal ? formatDateTime(r.reversal.createdAt) : '',
+        nameOf(r.userId),
+      ]),
+    })
+    return
+  }
   res.json({
     rows: rows.map(({ userId, _count, reversal, receivedOn, ...r }) => ({
       ...r,

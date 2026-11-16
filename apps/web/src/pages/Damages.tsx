@@ -5,6 +5,7 @@ import { Link, useSearchParams } from 'react-router'
 import {
   DAMAGE_REASON_LABELS, DAMAGE_REASONS, formatDateTime, formatGMD, formatQuantityWithUnit, quantityText, UNIT_LABELS, type DamageReason,
 } from '@onestop/shared'
+import { ExportButton } from '../components/ExportButton'
 import { api, query } from '../api'
 import { ProductPicker } from '../components/ProductPicker'
 import { newIdempotencyKey } from '../forms'
@@ -120,11 +121,14 @@ export function DamagesPage() {
         title="Damages"
         detail={damages.data ? `${damages.data.pending} waiting for a decision` : `Broken, expired, spoiled or missing stock in ${division.name}`}
         actions={
-          can('damage.report') ? (
-            <Button variant="primary" icon={<Plus className="size-4" aria-hidden />} onClick={() => setReporting(true)}>
-              Report damage
-            </Button>
-          ) : undefined
+          <>
+            <ExportButton path={`/damages${query({ status, from, to, search })}`} />
+            {can('damage.report') ? (
+              <Button variant="primary" icon={<Plus className="size-4" aria-hidden />} onClick={() => setReporting(true)}>
+                Report damage
+              </Button>
+            ) : null}
+          </>
         }
       />
       <div className="mb-3 flex flex-wrap items-center gap-2">

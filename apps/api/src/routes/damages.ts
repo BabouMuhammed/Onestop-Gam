@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto'
 import { Router, type Request } from 'express'
-import { can, damageDecisionSchema, damageListQuerySchema, damageReportSchema, DAMAGE_REASON_LABELS, formatGMD } from '@onestop/shared'
+import { can, csvNumber, damageDecisionSchema, formatDateTime, damageListQuerySchema, damageReportSchema, DAMAGE_REASON_LABELS, formatGMD } from '@onestop/shared'
 import { audit } from '../audit'
 import { authOf, divisionOf, requirePermission } from '../auth/guards'
 import { Decimal, type Prisma, prisma, type Tx } from '../db'
 import { conflict, dayRange, forbidden, HttpError, idParam, notFound, parse } from '../http'
+import { exportPaging, sendCsv, wantsCsv } from '../export'
 import { changeStock, once } from '../stock'
 
 export const damagesRouter = Router()
@@ -33,7 +34,7 @@ async function namesOf(ids: (string | null | undefined)[]) {
 
 damagesRouter.get('/', requirePermission('damage.view'), async (req, res) => {
   const divisionId = await divisionOf(req)
-  const q = parse(damageListQuerySchema, req.query)
+  const q = exportPaging(req, parse(damageListQuerySchema, req.query))
   const where: Prisma.DamageReportWhereInput = {
     divisionId,
     ...visibleTo(req),
@@ -59,6 +60,35 @@ damagesRouter.get('/', requirePermission('damage.view'), async (req, res) => {
   const nameOf = await namesOf(rows.flatMap((r) => [r.reportedBy, r.decision?.userId]))
   const { user } = authOf(req)
   const showCost = can(user.role, 'cost.view')
+  if (wantsCsv(req)) {
+    const status = (r: (typeof rows)[number]) => (!r.decision ? 'Waiting' : r.decision.approved ? 'Written off' : 'Rejected')
+    await sendCsv(req, res, {
+      name: 'damages',
+      what: 'damage reports',
+      divisionId,
+      header: ['Report', 'Reported', 'Code', 'Item', 'Where', 'Quantity', 'Unit', 'Reason', 'Details', 'Reported by', 'Status', 'Decided by', 'Decision note', ...(showCost ? ['Value at cost (D)'] : [])],
+      rows: rows.map((r) => {
+        const cost = r.decision ? r.decision.unitCost : r.product.costPrice
+        return [
+          r.number,
+          formatDateTime(r.createdAt),
+          r.product.sku,
+          r.product.name,
+          r.location.name,
+          csvNumber(r.quantity),
+          r.product.unit,
+          DAMAGE_REASON_LABELS[r.reason],
+          r.note,
+          nameOf(r.reportedBy),
+          status(r),
+          nameOf(r.decision?.userId),
+          r.decision?.note,
+          ...(showCost ? [csvNumber(cost ? r.quantity.times(cost).toFixed(2) : null)] : []),
+        ]
+      }),
+    })
+    return
+  }
   res.json({
     rows: rows.map((r) => {
       const cost = r.decision ? r.decision.unitCost : r.product.costPrice

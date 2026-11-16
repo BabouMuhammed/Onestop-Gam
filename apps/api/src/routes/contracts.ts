@@ -2,12 +2,13 @@ import { randomUUID } from 'node:crypto'
 import { Router } from 'express'
 import {
   contractDeliverySchema, contractListQuerySchema, contractOrderSchema, contractPaymentSchema, contractSchema, contractUpdateSchema,
-  CONTRACT_STATUS_LABELS, CONTRACT_TYPE_LABELS, formatGMD, reasonSchema,
+  CONTRACT_STATUS_LABELS, CONTRACT_TYPE_LABELS, CSV_ROW_LIMIT, csvNumber, formatDate, formatGMD, reasonSchema,
 } from '@onestop/shared'
 import { audit } from '../audit'
 import { authOf, divisionOf, requirePermission } from '../auth/guards'
 import { Decimal, Prisma, prisma, type Tx } from '../db'
 import { conflict, HttpError, idParam, notFound, parse } from '../http'
+import { sendCsv, wantsCsv } from '../export'
 import { changeStock, once } from '../stock'
 
 export const contractsRouter = Router()
@@ -109,9 +110,36 @@ contractsRouter.get('/', requirePermission('contract.view'), async (req, res) =>
         : undefined,
     },
     orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
-    take: 300,
+    take: wantsCsv(req) ? CSV_ROW_LIMIT : 300,
     include: fullContract,
   })
+  if (wantsCsv(req)) {
+    await sendCsv(req, res, {
+      name: 'contracts',
+      what: 'contracts',
+      divisionId,
+      header: ['Number', 'Title', 'Customer', 'Type', 'Status', 'Start', 'End', 'Contract value (D)', 'Delivered (D)', 'Collected (D)', 'Owed (D)'],
+      rows: contracts.map((c) => {
+        const s = summarise(c)
+        const start = dateOnly(c.startDate)
+        const end = dateOnly(c.endDate)
+        return [
+          c.number,
+          c.title,
+          c.customer.name,
+          CONTRACT_TYPE_LABELS[c.type],
+          CONTRACT_STATUS_LABELS[c.status],
+          start ? formatDate(start) : '',
+          end ? formatDate(end) : '',
+          csvNumber(s.contractValue?.toFixed(2)),
+          csvNumber(s.deliveredValue.toFixed(2)),
+          csvNumber(s.collected.toFixed(2)),
+          csvNumber(s.owed.toFixed(2)),
+        ]
+      }),
+    })
+    return
+  }
   res.json({
     rows: contracts.map((c) => {
       const s = summarise(c)

@@ -3,6 +3,7 @@ import { Search, ShoppingCart } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { formatDateTime, formatGMD, type SaleListQuery } from '@onestop/shared'
+import { ExportButton } from '../components/ExportButton'
 import { api, query } from '../api'
 import { useSession } from '../session'
 import { DateRangeFilter } from '../components/DateRangeFilter'
@@ -84,11 +85,14 @@ export function SalesPage() {
         title={cashier ? 'My sales' : 'Sales'}
         detail={sales.data ? `${sales.data.total} sale${sales.data.total === 1 ? '' : 's'}${cashier ? ', yours and any still owed on' : ''}` : division.name}
         actions={
-          can('sale.create') ? (
-            <ButtonLink to="/pos" variant="primary" icon={<ShoppingCart className="size-4" aria-hidden />}>
-              New sale
-            </ButtonLink>
-          ) : undefined
+          <>
+            <ExportButton path={`/sales${query({ customerId, status, search, from, to })}`} />
+            {can('sale.create') ? (
+              <ButtonLink to="/pos" variant="primary" icon={<ShoppingCart className="size-4" aria-hidden />}>
+                New sale
+              </ButtonLink>
+            ) : null}
+          </>
         }
       />
 

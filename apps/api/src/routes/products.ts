@@ -1,9 +1,10 @@
 import { Router } from 'express'
-import { can, formatGMD, priceSchema, productListQuerySchema, productSchema, productUpdateSchema } from '@onestop/shared'
+import { can, csvNumber, formatGMD, priceSchema, UNIT_LABELS, productListQuerySchema, productSchema, productUpdateSchema } from '@onestop/shared'
 import { audit } from '../audit'
 import { authOf, divisionOf, requirePermission } from '../auth/guards'
 import { Decimal, Prisma, prisma, type Tx } from '../db'
 import type { Request } from 'express'
+import { exportPaging, sendCsv, wantsCsv } from '../export'
 import { conflict, HttpError, idParam, notFound, parse } from '../http'
 
 export const productsRouter = Router()
@@ -37,7 +38,7 @@ interface ProductRow {
 
 productsRouter.get('/', requirePermission('inventory.view'), async (req, res) => {
   const divisionId = await divisionOf(req)
-  const q = parse(productListQuerySchema, req.query)
+  const q = exportPaging(req, parse(productListQuerySchema, req.query))
 
   const where: Prisma.Sql[] = [Prisma.sql`p."divisionId" = ${divisionId}`]
   where.push(q.filter === 'inactive' ? Prisma.sql`p."isActive" = false` : Prisma.sql`p."isActive" = true`)
@@ -69,6 +70,26 @@ productsRouter.get('/', requirePermission('inventory.view'), async (req, res) =>
       LIMIT ${q.pageSize} OFFSET ${(q.page - 1) * q.pageSize}`,
     prisma.$queryRaw<{ total: number }[]>`SELECT COUNT(*)::int AS "total" FROM (${base}) counted`,
   ])
+  if (wantsCsv(req)) {
+    const showCost = can(authOf(req).user.role, 'cost.view')
+    await sendCsv(req, res, {
+      name: 'inventory',
+      what: 'products',
+      divisionId,
+      header: ['Code', 'Product', 'Unit', q.locationId ? 'Quantity here' : 'Quantity', 'Locations', 'Selling price (D)', ...(showCost ? ['Cost price (D)'] : []), 'Active'],
+      rows: rows.map((r) => [
+        r.sku,
+        r.name,
+        UNIT_LABELS[r.unit as keyof typeof UNIT_LABELS]?.one ?? r.unit,
+        csvNumber(r.quantity),
+        r.locationCount,
+        csvNumber(r.sellingPrice?.toFixed(2)),
+        ...(showCost ? [csvNumber(r.costPrice?.toFixed(2))] : []),
+        r.isActive ? 'Yes' : 'No',
+      ]),
+    })
+    return
+  }
   res.json({ rows: rows.map((row) => forViewer(req, row)), total: totals[0]?.total ?? 0, page: q.page, pageSize: q.pageSize })
 })
 

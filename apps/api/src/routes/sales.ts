@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto'
 import { Router, type Request } from 'express'
-import { can, formatGMD, saleListQuerySchema, salePaymentSchema, saleSchema, saleVoidSchema, type PaymentMethod } from '@onestop/shared'
+import { can, csvNumber, formatDateTime, formatGMD, saleListQuerySchema, salePaymentSchema, saleSchema, saleVoidSchema, type PaymentMethod } from '@onestop/shared'
 import { audit } from '../audit'
 import { authOf, divisionOf, requirePermission } from '../auth/guards'
 import { Decimal, Prisma, prisma, type Tx } from '../db'
 import { conflict, dayRange, forbidden, HttpError, idParam, notFound, parse } from '../http'
+import { exportPaging, sendCsv, wantsCsv } from '../export'
 import { requireOpenShift, openShiftOf } from '../shifts'
 import { changeStock, once } from '../stock'
 
@@ -73,7 +74,7 @@ const escapeLike = (text: string) => text.replace(/[\\%_]/g, (ch) => `\\${ch}`)
 
 salesRouter.get('/', requirePermission('sale.view'), async (req, res) => {
   const divisionId = await divisionOf(req)
-  const q = parse(saleListQuerySchema, req.query)
+  const q = exportPaging(req, parse(saleListQuerySchema, req.query))
   const where: Prisma.Sql[] = [visibleTo(req)]
   if (q.customerId) where.push(Prisma.sql`s."customerId" = ${q.customerId}`)
   if (q.status === 'unpaid') where.push(Prisma.sql`"voidedAt" IS NULL AND s."total" > "paid"`)
@@ -100,6 +101,26 @@ salesRouter.get('/', requirePermission('sale.view'), async (req, res) => {
     prisma.$queryRaw<{ total: number }[]>`SELECT COUNT(*)::int AS "total" FROM (${base}) counted`,
   ])
   const nameOf = await namesOf(rows.map((r) => r.userId))
+  if (wantsCsv(req)) {
+    await sendCsv(req, res, {
+      name: 'sales',
+      what: 'sales',
+      divisionId,
+      header: ['Receipt', 'Sold', 'Customer', 'Lines', 'Total (D)', 'Paid (D)', 'Owed (D)', 'Voided', 'Sold by'],
+      rows: rows.map((r) => [
+        r.number,
+        formatDateTime(r.createdAt),
+        r.customerName ?? 'Walk-in',
+        r.lineCount,
+        csvNumber(new Decimal(r.total).toFixed(2)),
+        csvNumber(new Decimal(r.paid).toFixed(2)),
+        csvNumber(r.voidedAt ? '0.00' : new Decimal(r.total).minus(r.paid).toFixed(2)),
+        r.voidedAt ? formatDateTime(r.voidedAt) : '',
+        nameOf(r.userId),
+      ]),
+    })
+    return
+  }
   res.json({
     rows: rows.map(({ userId, customerId, customerName, ...r }) => ({
       ...r,

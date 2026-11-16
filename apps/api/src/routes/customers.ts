@@ -1,8 +1,9 @@
 import { Router } from 'express'
-import { can, customerListQuerySchema, customerSchema, customerUpdateSchema } from '@onestop/shared'
+import { can, CSV_ROW_LIMIT, csvNumber, customerListQuerySchema, customerSchema, customerUpdateSchema } from '@onestop/shared'
 import { audit } from '../audit'
 import { authOf, divisionOf, requirePermission } from '../auth/guards'
 import { Prisma, prisma } from '../db'
+import { sendCsv, wantsCsv } from '../export'
 import { forbidden, idParam, notFound, parse } from '../http'
 
 export const customersRouter = Router()
@@ -52,8 +53,28 @@ customersRouter.get('/', requirePermission('customer.view'), async (req, res) =>
       WHERE ${Prisma.join(where, ' AND ')}
     ) listed ${owing}
     ORDER BY "name" ASC
-    LIMIT 500`
+    LIMIT ${wantsCsv(req) ? CSV_ROW_LIMIT : 500}`
   const showContracts = can(authOf(req).user.role, 'contract.view')
+  if (wantsCsv(req)) {
+    await sendCsv(req, res, {
+      name: 'customers',
+      what: 'customers',
+      divisionId,
+      header: ['Customer', 'Phone', 'Address', 'Credit allowed', 'Active', 'Sales', 'Credit sales owed (D)', ...(showContracts ? ['Contracts owed (D)'] : []), 'Total owed (D)'],
+      rows: rows.map((c) => [
+        c.name,
+        c.phone,
+        c.address,
+        c.creditAllowed ? 'Yes' : 'No',
+        c.isActive ? 'Yes' : 'No',
+        c.saleCount,
+        csvNumber(c.creditOwed.toFixed(2)),
+        ...(showContracts ? [csvNumber(c.contractOwed.toFixed(2))] : []),
+        csvNumber(c.creditOwed.plus(c.contractOwed).toFixed(2)),
+      ]),
+    })
+    return
+  }
   res.json({ rows: rows.map(({ creditOwed, contractOwed, ...customer }) => {
     const owed = creditOwed.plus(contractOwed).toString()
     return { ...customer, creditOwed: creditOwed.toString(), ...(showContracts ? { contractOwed: contractOwed.toString() } : {}), owed, balance: owed }

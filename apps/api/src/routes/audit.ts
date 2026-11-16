@@ -1,7 +1,8 @@
 import { Router, type Request } from 'express'
-import { auditListQuerySchema } from '@onestop/shared'
+import { auditListQuerySchema, formatDateTime } from '@onestop/shared'
 import { authOf, divisionOf, requirePermission } from '../auth/guards'
 import { type Prisma, prisma } from '../db'
+import { exportPaging, sendCsv, wantsCsv } from '../export'
 import { dayRange, parse } from '../http'
 
 export const auditRouter = Router()
@@ -15,7 +16,7 @@ async function scopeOf(req: Request): Promise<Prisma.AuditLogWhereInput> {
 
 /** Read-only. There is no route that edits or deletes audit rows, and the database rejects it too. */
 auditRouter.get('/', requirePermission('audit.view'), async (req, res) => {
-  const q = parse(auditListQuerySchema, req.query)
+  const q = exportPaging(req, parse(auditListQuerySchema, req.query))
   const where: Prisma.AuditLogWhereInput = {
     ...(await scopeOf(req)),
     createdAt: dayRange(q.from, q.to),
@@ -33,6 +34,23 @@ auditRouter.get('/', requirePermission('audit.view'), async (req, res) => {
     }),
     prisma.auditLog.count({ where }),
   ])
+  if (wantsCsv(req)) {
+    const divisions = await prisma.division.findMany({ select: { id: true, name: true } })
+    await sendCsv(req, res, {
+      name: 'audit-log',
+      what: 'audit log entries',
+      divisionId: typeof where.divisionId === 'string' ? where.divisionId : null,
+      header: ['Date', 'By', 'Division', 'Action', 'What happened'],
+      rows: rows.map((r) => [
+        formatDateTime(r.createdAt),
+        r.userName ?? 'System',
+        r.divisionId ? (divisions.find((d) => d.id === r.divisionId)?.name ?? '') : 'Company-wide',
+        r.action,
+        r.summary,
+      ]),
+    })
+    return
+  }
   res.json({ rows, total, page: q.page, pageSize: q.pageSize })
 })
 
