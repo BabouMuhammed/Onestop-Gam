@@ -15,6 +15,7 @@ import { dashboardRouter } from './routes/dashboard'
 import { authRouter } from './routes/auth'
 import { locationsRouter } from './routes/locations'
 import { overviewRouter } from './routes/overview'
+import { priceRequestsRouter } from './routes/priceRequests'
 import { productsRouter } from './routes/products'
 import { receiptsRouter } from './routes/receipts'
 import { salesRouter } from './routes/sales'
@@ -46,6 +47,7 @@ export function createApp() {
   api.use('/dashboard', dashboardRouter)
   api.use('/locations', locationsRouter)
   api.use('/products', productsRouter)
+  api.use('/price-requests', priceRequestsRouter)
   api.use('/stock', stockRouter)
   api.use('/suppliers', suppliersRouter)
   api.use('/receipts', receiptsRouter)

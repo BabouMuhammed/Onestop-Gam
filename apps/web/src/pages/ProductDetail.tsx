@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { useParams } from 'react-router'
+import { Link, useParams } from 'react-router'
 import {
   formatDateTime, formatGMD, formatQuantityWithUnit, LOCATION_TYPE_LABELS, priceSchema, UNIT_LABELS, UNIT_NAMES,
   type PriceInput,
@@ -55,7 +55,7 @@ export function ProductDetailPage() {
         actions={
           <>
             {can('product.manage') ? <Button onClick={() => setDialog('edit')}>Edit</Button> : null}
-            {can('price.set') ? <Button onClick={() => setDialog('price')}>{product.sellingPrice === null ? 'Set price' : 'Change price'}</Button> : null}
+            {can('price.set') && !(detail.data.pendingPrice && !can('price.approve')) ? <Button onClick={() => setDialog('price')}>{product.sellingPrice === null ? 'Set price' : 'Change price'}</Button> : null}
             {/* Stock only leaves through a damage report a manager approves, never a free-form edit. */}
             {can('damage.report') && product.isActive && Number(total) > 0 ? (
               <ButtonLink to={`/damages?report=${product.id}`}>Report damage</ButtonLink>
@@ -64,6 +64,21 @@ export function ProductDetailPage() {
         }
       />
 
+      {detail.data.pendingPrice ? (
+        <Alert tone="info" title="Price change waiting for the CEO" className="mb-4">
+          {detail.data.pendingPrice.by ?? 'A manager'} asked on {formatDateTime(detail.data.pendingPrice.createdAt)} to change the price to{' '}
+          {formatGMD(detail.data.pendingPrice.newPrice)}
+          {detail.data.pendingPrice.reason ? `: ${detail.data.pendingPrice.reason}` : ''}. The current price stays until it is decided.
+          {can('price.approve') ? (
+            <>
+              {' '}
+              <Link to="/admin/price-approvals" className="underline">
+                Review it
+              </Link>
+            </>
+          ) : null}
+        </Alert>
+      ) : null}
       {product.sellingPrice === null && product.isActive ? (
         <Alert tone="warn" title="No selling price" className="mb-4">
           This product cannot be sold until a price is set.
@@ -168,18 +183,21 @@ function useRefresh(productId: string) {
 
 function PriceForm({ detail, onClose }: { detail: ProductDetail; onClose: () => void }) {
   const { product } = detail
+  const { can } = useSession()
   const refresh = useRefresh(product.id)
   const notify = useNotify()
   const [failure, setFailure] = useState<unknown>(null)
-  const form = useForm<PriceInput>({ resolver: zodResolver(priceSchema), defaultValues: { sellingPrice: product.sellingPrice ?? '' } })
+  // A manager changing a price that is already set asks the CEO; the old price stands until then.
+  const needsApproval = product.sellingPrice !== null && !can('price.approve')
+  const form = useForm<PriceInput>({ resolver: zodResolver(priceSchema), defaultValues: { sellingPrice: product.sellingPrice ?? '', reason: '' } })
   const save = useMutation({
-    mutationFn: (input: PriceInput) => api(`/products/${product.id}/price`, { method: 'PUT', body: input }),
-    onSuccess: async () => {
+    mutationFn: (input: PriceInput) => api<{ pending?: boolean }>(`/products/${product.id}/price`, { method: 'PUT', body: input }),
+    onSuccess: async (result) => {
       await refresh()
-      notify('Price saved')
+      notify(result.pending ? 'Sent to the CEO for approval. The current price stays until then.' : 'Price saved')
       onClose()
     },
-    onError: (error) => setFailure(showFieldErrors(error, form.setError, ['sellingPrice']) ? null : error),
+    onError: (error) => setFailure(showFieldErrors(error, form.setError, ['sellingPrice', 'reason']) ? null : error),
   })
   return (
     <form noValidate className="space-y-3" onSubmit={form.handleSubmit((v) => { setFailure(null); save.mutate(v) })}>
@@ -188,13 +206,22 @@ function PriceForm({ detail, onClose }: { detail: ProductDetail; onClose: () => 
         {product.name}
         {product.sellingPrice !== null ? `, currently ${formatGMD(product.sellingPrice)}` : ''}
       </p>
-      <Field label={`Selling price per ${UNIT_LABELS[product.unit].one} (D)`} hint="Every price change is recorded with your name." error={form.formState.errors.sellingPrice?.message}>
+      <Field
+        label={`${needsApproval ? 'New selling price' : 'Selling price'} per ${UNIT_LABELS[product.unit].one} (D)`}
+        hint={needsApproval ? 'The CEO approves price changes. The current price stays until then.' : 'Every price change is recorded with your name.'}
+        error={form.formState.errors.sellingPrice?.message}
+      >
         {(a) => <Input {...a} inputMode="decimal" autoFocus className="text-right" {...form.register('sellingPrice')} />}
       </Field>
+      {needsApproval ? (
+        <Field label="Reason (optional)" hint="Helps the CEO decide." error={form.formState.errors.reason?.message}>
+          {(a) => <Input {...a} {...form.register('reason')} />}
+        </Field>
+      ) : null}
       <div className={dialogFooter}>
         <Button onClick={onClose}>Cancel</Button>
         <Button type="submit" variant="primary" busy={save.isPending}>
-          Save price
+          {needsApproval ? 'Ask for approval' : 'Save price'}
         </Button>
       </div>
     </form>

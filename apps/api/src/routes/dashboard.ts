@@ -176,6 +176,9 @@ dashboardRouter.get('/', requirePermission('overview.view'), async (req, res) =>
           },
         }
       : {}),
+    ...(can(user.role, 'price.approve')
+      ? { pendingPriceRequests: await prisma.priceChangeRequest.count({ where: { divisionId: { in: ids }, decision: { is: null } } }) }
+      : {}),
     damages: { count: damages[0]?.count ?? 0, value: showCost ? (damages[0]?.value.toDecimalPlaces(2).toString() ?? '0') : undefined, pending: damages[0]?.pending ?? 0 },
     daily: dailyRows,
     topProducts: topProducts.map((t) => ({ ...t, quantity: t.quantity.toString(), revenue: t.revenue.toString(), tillRevenue: t.tillRevenue.toString() })),

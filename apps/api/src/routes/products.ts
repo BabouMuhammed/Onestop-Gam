@@ -4,7 +4,7 @@ import { audit } from '../audit'
 import { authOf, divisionOf, requirePermission } from '../auth/guards'
 import { Decimal, Prisma, prisma, type Tx } from '../db'
 import type { Request } from 'express'
-import { conflict, idParam, notFound, parse } from '../http'
+import { conflict, HttpError, idParam, notFound, parse } from '../http'
 
 export const productsRouter = Router()
 
@@ -77,7 +77,7 @@ productsRouter.get('/:id', requirePermission('inventory.view'), async (req, res)
   const product = await prisma.product.findFirst({ where: { id: idParam(req), divisionId } })
   if (!product) throw notFound('Product')
 
-  const [levels, movements, priceChanges] = await Promise.all([
+  const [levels, movements, priceChanges, waiting] = await Promise.all([
     prisma.stockLevel.findMany({
       where: { productId: product.id, quantity: { gt: 0 } },
       select: { quantity: true, location: { select: { id: true, name: true, type: true } } },
@@ -93,9 +93,10 @@ productsRouter.get('/:id', requirePermission('inventory.view'), async (req, res)
       },
     }),
     prisma.priceChange.findMany({ where: { productId: product.id }, orderBy: { createdAt: 'desc' }, take: 10 }),
+    prisma.priceChangeRequest.findFirst({ where: { productId: product.id, decision: { is: null } } }),
   ])
 
-  const userIds = [...new Set([...movements.map((m) => m.userId), ...priceChanges.map((c) => c.userId)].filter((id): id is string => !!id))]
+  const userIds = [...new Set([...movements.map((m) => m.userId), ...priceChanges.map((c) => c.userId), waiting?.requestedBy].filter((id): id is string => !!id))]
   const users = await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, name: true } })
   const nameOf = (id: string | null) => users.find((u) => u.id === id)?.name ?? null
 
@@ -106,6 +107,9 @@ productsRouter.get('/:id', requirePermission('inventory.view'), async (req, res)
     levels: levels.map((l) => ({ locationId: l.location.id, location: l.location.name, type: l.location.type, quantity: l.quantity })),
     movements: movements.map(({ userId, location, ...m }) => ({ ...m, location: location.name, by: nameOf(userId) })),
     priceChanges: priceChanges.map(({ userId, ...c }) => ({ ...c, by: nameOf(userId) })),
+    pendingPrice: waiting
+      ? { id: waiting.id, newPrice: waiting.newPrice.toString(), reason: waiting.reason, createdAt: waiting.createdAt, by: nameOf(waiting.requestedBy) }
+      : null,
   })
 })
 
@@ -199,19 +203,51 @@ productsRouter.patch('/:id', requirePermission('product.manage'), async (req, re
   res.json({ product: forViewer(req, product) })
 })
 
+/**
+ * Set a selling price. A first price on an unpriced product, and any change by the CEO,
+ * apply at once. A manager's change to an existing price becomes a request the CEO
+ * approves or rejects; until then the old price stands. One request per product waits
+ * at a time.
+ */
 productsRouter.put('/:id/price', requirePermission('price.set'), async (req, res) => {
   const divisionId = await divisionOf(req)
-  const { sellingPrice } = parse(priceSchema, req.body)
-  const product = await prisma.$transaction(async (tx) => {
-    // Lock the row so the recorded "old price" is the one this change actually replaced.
-    const locked = await tx.$queryRaw<{ id: string; sku: string; sellingPrice: Prisma.Decimal | null }[]>`
-      SELECT "id", "sku", "sellingPrice" FROM "Product"
+  const { sellingPrice, reason } = parse(priceSchema, req.body)
+  const { user } = authOf(req)
+  const result = await prisma.$transaction(async (tx) => {
+    // Lock the row so the recorded "old price" is the one this change actually replaced,
+    // and so two managers cannot both open a request for the same product.
+    const locked = await tx.$queryRaw<{ id: string; sku: string; name: string; sellingPrice: Prisma.Decimal | null }[]>`
+      SELECT "id", "sku", "name", "sellingPrice" FROM "Product"
       WHERE "id" = ${idParam(req)} AND "divisionId" = ${divisionId} FOR UPDATE`
     const before = locked[0]
     if (!before) throw notFound('Product')
+    const price = new Decimal(sellingPrice)
+    if (before.sellingPrice?.equals(price)) {
+      throw new HttpError(409, 'SAME_PRICE', 'That is already the price', { sellingPrice: 'That is already the price' })
+    }
+
+    if (before.sellingPrice !== null && !can(user.role, 'price.approve')) {
+      const waiting = await tx.priceChangeRequest.findFirst({ where: { productId: before.id, decision: { is: null } }, select: { newPrice: true } })
+      if (waiting) {
+        throw conflict(`A change to ${formatGMD(waiting.newPrice.toString())} is already waiting for the CEO`)
+      }
+      const request = await tx.priceChangeRequest.create({
+        data: { divisionId, productId: before.id, oldPrice: before.sellingPrice, newPrice: price, reason: reason || null, requestedBy: user.id },
+      })
+      await audit(tx, req, {
+        action: 'price.requested',
+        entity: 'PriceChangeRequest',
+        entityId: request.id,
+        divisionId,
+        summary: `Asked to change the price of ${before.sku} ${before.name} from ${formatGMD(before.sellingPrice.toString())} to ${formatGMD(sellingPrice)}`,
+        after: { sellingPrice, reason: reason || null },
+      })
+      return { pending: true as const, request: { id: request.id, newPrice: request.newPrice.toString() } }
+    }
+
     const updated = await tx.product.update({ where: { id: before.id }, data: { sellingPrice } })
     await tx.priceChange.create({
-      data: { productId: before.id, oldPrice: before.sellingPrice, newPrice: sellingPrice, userId: authOf(req).user.id },
+      data: { productId: before.id, oldPrice: before.sellingPrice, newPrice: sellingPrice, userId: user.id },
     })
     await audit(tx, req, {
       action: 'product.price_set',
@@ -222,7 +258,11 @@ productsRouter.put('/:id/price', requirePermission('price.set'), async (req, res
       before: { sellingPrice: before.sellingPrice },
       after: { sellingPrice },
     })
-    return updated
+    return { pending: false as const, product: updated }
   })
-  res.json({ product: forViewer(req, product) })
+  if (result.pending) {
+    res.status(202).json({ pending: true, request: result.request })
+    return
+  }
+  res.json({ product: forViewer(req, result.product) })
 })

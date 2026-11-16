@@ -133,7 +133,9 @@ describe('products and prices', () => {
     expect(missing.body.rows.map((r: { sku: string }) => r.sku)).toEqual(['QF-00001'])
 
     expect((await manager.put(`/api/products/${world.qf.product}/price`).send({ sellingPrice: '125.50' })).status).toBe(200)
-    expect((await manager.put(`/api/products/${world.qf.product}/price`).send({ sellingPrice: '130' })).status).toBe(200)
+    // Changing a price that is already set is the CEO's call (managers ask; see prices.test.ts).
+    const ceo = await signIn('ceo', world.qf.id)
+    expect((await ceo.put(`/api/products/${world.qf.product}/price`).send({ sellingPrice: '130' })).status).toBe(200)
     expect((await manager.put(`/api/products/${world.qf.product}/price`).send({ sellingPrice: '-5' })).status).toBe(400)
 
     const history = await prisma.priceChange.findMany({ orderBy: { createdAt: 'asc' } })

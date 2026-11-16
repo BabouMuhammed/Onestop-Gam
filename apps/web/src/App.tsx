@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Navigate, Route, Routes } from 'react-router'
 import type { Permission } from '@onestop/shared'
 import { AppShell } from './layout/AppShell'
+import { PriceApprovalsPage } from './pages/PriceApprovals'
 import { AuditLogPage } from './pages/AuditLog'
 import { ChangePasswordPage } from './pages/ChangePassword'
 import { ContractDetailPage, DeliveryNotePage } from './pages/ContractDetail'
@@ -78,6 +79,7 @@ export function App() {
           <Route path="suppliers" element={<Require permission="supplier.view"><SuppliersPage /></Require>} />
           <Route path="locations" element={<Require permission="location.manage"><LocationsPage /></Require>} />
           <Route path="admin/users" element={<Require permission="user.manage"><UsersPage /></Require>} />
+          <Route path="admin/price-approvals" element={<Require permission="price.approve"><PriceApprovalsPage /></Require>} />
           <Route path="admin/audit" element={<Require permission="audit.view"><AuditLogPage /></Require>} />
           <Route path="account/password" element={<ChangePasswordPage />} />
           <Route path="*" element={<EmptyState title="Page not found">The address may be mistyped, or the page may have moved.</EmptyState>} />

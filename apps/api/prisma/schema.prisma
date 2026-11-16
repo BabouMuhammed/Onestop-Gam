@@ -102,6 +102,7 @@ model Division {
   payments  Payment[]
   damages   DamageReport[]
   contracts Contract[]
+  priceRequests PriceChangeRequest[]
 }
 
 model User {
@@ -182,6 +183,7 @@ model Product {
   division     Division        @relation(fields: [divisionId], references: [id])
   levels       StockLevel[]
   movements    StockMovement[]
+  priceRequests PriceChangeRequest[]
   priceChanges PriceChange[]
   receiptLines StockReceiptLine[]
   saleLines    SaleLine[]
@@ -636,6 +638,39 @@ model PriceChange {
   product Product @relation(fields: [productId], references: [id])
 
   @@index([productId, createdAt])
+}
+
+/// A manager's request to change a price that is already set. The CEO approves or
+/// rejects it; until then the old price stands. Append-only.
+model PriceChangeRequest {
+  id          String   @id @default(uuid())
+  divisionId  String
+  productId   String
+  /// The price when the request was made. Approval is refused if it has moved since.
+  oldPrice    Decimal  @db.Decimal(12, 2)
+  newPrice    Decimal  @db.Decimal(12, 2)
+  reason      String?
+  requestedBy String
+  createdAt   DateTime @default(now())
+
+  division Division              @relation(fields: [divisionId], references: [id])
+  product  Product               @relation(fields: [productId], references: [id])
+  decision PriceChangeDecision?
+
+  @@index([divisionId, createdAt])
+  @@index([productId, createdAt])
+}
+
+/// One per request. The unique requestId makes a second decision impossible.
+model PriceChangeDecision {
+  id        String   @id @default(uuid())
+  requestId String   @unique
+  approved  Boolean
+  note      String?
+  userId    String
+  createdAt DateTime @default(now())
+
+  request PriceChangeRequest @relation(fields: [requestId], references: [id])
 }
 
 /// Makes a repeated submission (double click, retry after a dropped connection) a no-op.

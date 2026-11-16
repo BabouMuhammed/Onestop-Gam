@@ -18,7 +18,7 @@ One system for Onestopgam Inc's two divisions, **Quality Foods** and **Le Gaye B
 - **Contracts.** Fixed supply, ongoing supply and project contracts with a customer: agreed items and prices (and quantities, except on ongoing supply), orders within the agreed quantities, deliveries in instalments that take stock and print a delivery note, and collections, including payment ahead of delivery up to the contract value. Mistaken deliveries are reversed, not edited.
 - **Dashboard.** For the CEO, Finance and managers: sales today, this week and this month against the period before, money collected and owed, contract deliveries, gross margin, a needs-attention line, a daily sales chart, best-selling products and the biggest debtors. The CEO and Finance see both divisions together or one at a time. Every figure comes from posted records.
 - **Barcodes.** A product can carry the code printed on its pack.
-- **Prices.** Products can exist without a selling price; managers set prices, and every change is logged.
+- **Prices.** Products can exist without a selling price. A manager sets the first price; changing a price that is already set goes to the CEO for approval, and the old price stays until then. Every change is logged.
 - **Users and audit log.** The CEO manages accounts; CEO and Finance can read the audit log.
 - **Opening stock import.** Loads a converted stock-count workbook as a division's starting stock.
 
