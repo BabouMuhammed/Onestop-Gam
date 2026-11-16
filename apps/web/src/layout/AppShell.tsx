@@ -1,9 +1,8 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ClipboardCheck, KeyRound, LayoutDashboard, FileText, LogOut, Menu, PackageX, Package, PackagePlus, Receipt, ScrollText, ShoppingCart, Truck, UserRound, Users, Warehouse, X, type LucideIcon, BadgeCheck, Banknote } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { ROLE_LABELS, type Permission } from '@onestop/shared'
-import { api } from '../api'
+import { useSignOut } from '../useSignOut'
 import { GlobalSearch } from '../components/GlobalSearch'
 import { divisionBrand, useSession } from '../session'
 import { cn, Select } from '../ui'
@@ -55,14 +54,7 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
 function Navigation() {
   const groups = useNavigation()
   const { user } = useSession()
-  const queryClient = useQueryClient()
-  const signOut = useMutation({
-    mutationFn: () => api('/auth/logout', { method: 'POST' }),
-    onSettled: () => {
-      queryClient.clear()
-      queryClient.setQueryData(['me'], null)
-    },
-  })
+  const signOut = useSignOut()
 
   return (
     <div className="flex h-full flex-col">

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { changePasswordSchema, PASSWORD_MIN_LENGTH } from '@onestop/shared'
+import { useSignOut } from '../useSignOut'
 import { api } from '../api'
 import { showFieldErrors } from '../forms'
 import { Alert, Button, ErrorAlert, Field, Input, PageHeader, useNotify } from '../ui'
@@ -31,10 +32,7 @@ export function ChangePasswordPage({ forced = false }: { forced?: boolean }) {
     },
     onError: (error) => setFailure(showFieldErrors(error, form.setError, ['currentPassword', 'newPassword']) ? null : error),
   })
-  const signOut = useMutation({
-    mutationFn: () => api('/auth/logout', { method: 'POST' }),
-    onSettled: () => queryClient.setQueryData(['me'], null),
-  })
+  const signOut = useSignOut()
 
   const body = (
     <form onSubmit={form.handleSubmit((values) => { setFailure(null); change.mutate(values) })} noValidate className="max-w-sm space-y-3">
