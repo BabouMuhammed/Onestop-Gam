@@ -21,6 +21,10 @@ Brought forward for the demo on 17/11/2026.
 - Damage reports, written off only when a manager who did not report them (or the CEO) approves. The loss is valued at the cost price of the day.
 - Contracts of three types (fixed supply, ongoing supply, project) with agreed items, orders, deliveries that take stock, delivery notes, delivery reversals, and collections.
 
+## Dashboard (done)
+
+Sales, money and stock at a glance for the CEO, Finance and managers, with charts of daily sales and best sellers. Brought forward for the demo.
+
 ## Phase 5: Selling while offline
 
 - Sales recorded on the device when the connection is down, and sent when it returns

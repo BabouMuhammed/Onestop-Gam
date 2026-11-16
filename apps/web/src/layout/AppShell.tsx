@@ -22,7 +22,7 @@ function useNavigation(): { main: NavItem[]; admin: NavItem[] } {
     { to: '/sales', label: user.role === 'CASHIER' ? 'My sales' : 'Sales', icon: Receipt, permission: 'sale.view' },
     { to: '/customers', label: 'Customers', icon: UserRound, permission: 'customer.view' },
     { to: '/contracts', label: 'Contracts', icon: FileText, permission: 'contract.view' },
-    { to: '/overview', label: user.role === 'MANAGER' ? 'Dashboard' : 'Overview', icon: LayoutDashboard, permission: 'overview.view' },
+    { to: '/overview', label: 'Dashboard', icon: LayoutDashboard, permission: 'overview.view' },
     { to: '/inventory', label: user.role === 'CASHIER' ? 'Product lookup' : 'Inventory', icon: Package, permission: 'inventory.view' },
     { to: '/receiving', label: 'Receiving', icon: PackagePlus, permission: 'receipt.view' },
     { to: '/stock-count', label: 'Stock count', icon: ClipboardCheck, permission: 'stock.count' },
