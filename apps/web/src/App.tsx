@@ -24,6 +24,7 @@ import { SaleDetailPage } from './pages/SaleDetail'
 import { SalesPage } from './pages/Sales'
 import { StockCountPage } from './pages/StockCount'
 import { SuppliersPage } from './pages/Suppliers'
+import { TwoStepCodePage, TwoStepSetupPage } from './pages/TwoStep'
 import { UsersPage } from './pages/Users'
 import { SessionProvider, useMe, useSession } from './session'
 import { Alert, Button, EmptyState, Loading } from './ui'
@@ -45,7 +46,9 @@ export function App() {
     )
   }
   if (!me.data) return <LoginPage />
+  if (me.data === 'two-step') return <TwoStepCodePage />
   if (me.data.user.mustChangePassword) return <ChangePasswordPage forced />
+  if (me.data.twoStep.required && !me.data.twoStep.enabled) return <TwoStepSetupPage />
   if (me.data.divisions.length === 0) {
     return (
       <div className="mx-auto max-w-md p-6 pt-24">

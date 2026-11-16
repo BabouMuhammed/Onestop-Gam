@@ -119,11 +119,19 @@ model User {
   failedLogins       Int       @default(0)
   lockedUntil        DateTime?
   lastLoginAt        DateTime?
+  /// Two-step sign-in. Secrets are stored encrypted (AES-256-GCM, key from TOTP_ENCRYPTION_KEY).
+  totpSecret         String?
+  /// A secret being set up, not yet confirmed with a code.
+  totpPendingSecret  String?
+  totpEnabledAt      DateTime?
+  /// The 30-second step of the last code accepted, so a code cannot be used twice.
+  totpLastStep       Int?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
   division Division? @relation(fields: [divisionId], references: [id])
   sessions Session[]
+  recoveryCodes TwoStepRecoveryCode[]
 }
 
 model Session {
@@ -136,6 +144,8 @@ model Session {
   expiresAt  DateTime
   ip         String?
   userAgent  String?
+  /// Password accepted, code still needed. A pending session can do nothing but enter the code.
+  twoStepPending Boolean @default(false)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -713,6 +723,20 @@ model CashShiftClose {
   createdAt    DateTime @default(now())
 
   shift CashShift @relation(fields: [shiftId], references: [id])
+}
+
+/// One-time codes for signing in when the phone with the authenticator app is lost.
+/// Stored hashed (argon2); each works once.
+model TwoStepRecoveryCode {
+  id        String    @id @default(uuid())
+  userId    String
+  codeHash  String
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 /// Makes a repeated submission (double click, retry after a dropped connection) a no-op.

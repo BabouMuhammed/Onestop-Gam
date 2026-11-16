@@ -8,10 +8,12 @@ import type { Division, Me } from './types'
 export function useMe() {
   return useQuery({
     queryKey: ['me'],
-    queryFn: async (): Promise<Me | null> => {
+    // 'two-step' means the password was accepted and the code from the app is still needed.
+    queryFn: async (): Promise<Me | null | 'two-step'> => {
       try {
         return await api<Me>('/auth/me')
       } catch (error) {
+        if (error instanceof ApiError && error.code === 'TWO_STEP_REQUIRED') return 'two-step'
         if (error instanceof ApiError && error.status === 401) return null
         throw error
       }

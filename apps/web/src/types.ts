@@ -10,6 +10,7 @@ export interface Me {
   user: { id: string; username: string; name: string; role: Role; divisionId: string | null; mustChangePassword: boolean }
   permissions: Permission[]
   divisions: Division[]
+  twoStep: { required: boolean; enabled: boolean }
 }
 
 export interface Page<T> {
@@ -125,6 +126,8 @@ export interface UserRow {
   mustChangePassword: boolean
   lastLoginAt: string | null
   lockedUntil: string | null
+  /** When two-step sign-in was set up; null when it is off. */
+  totpEnabledAt: string | null
 }
 
 export interface AuditRow {

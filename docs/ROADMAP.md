@@ -25,6 +25,18 @@ Brought forward for the demo on 17/11/2026.
 
 Sales, money and stock at a glance for the CEO, Finance and managers, with charts of daily sales and best sellers. Brought forward for the demo.
 
+## Review improvements (done)
+
+From the system review, in seven pull requests:
+
+1. Grouped navigation, one division switch, customer debts split into credit sales and contracts
+2. Top-bar search and date filters on Sales, Receiving, Damages and the Audit log
+3. Free-form stock adjustments removed; stock moves only through documents
+4. Managers' changes to an existing price go to the CEO for approval
+5. Till sessions and cash-ups (float, blind count, differences)
+6. CSV export of the main lists, with formula-injection escaping
+7. Two-step sign-in for CEO and Finance
+
 ## Phase 5: Selling while offline
 
 - Sales recorded on the device when the connection is down, and sent when it returns
@@ -33,10 +45,9 @@ Sales, money and stock at a glance for the CEO, Finance and managers, with chart
 
 Phase 3 was built for this: the till chooses each sale's id, so sending a sale twice records it once.
 
-## Phase 6: Cash-up
+## Phase 6: Returns
 
-- Cashier shift open and close, with cash counted against sales
-- Returns of part of a sale
+- Returns of part of a sale (cash-ups are done; see above)
 
 ## Phase 7: Transfers
 

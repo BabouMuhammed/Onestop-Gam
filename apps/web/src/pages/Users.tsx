@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Copy, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { CROSS_DIVISION_ROLES, formatDateTime, ROLE_LABELS, ROLES, userCreateSchema, type UserCreateInput } from '@onestop/shared'
+import { CROSS_DIVISION_ROLES, formatDateTime, ROLE_LABELS, ROLES, userCreateSchema, type UserCreateInput, needsTwoStep } from '@onestop/shared'
 import { api } from '../api'
 import { showFieldErrors } from '../forms'
 import { useSession } from '../session'
@@ -34,6 +34,15 @@ export function UsersPage() {
     onSuccess: async (_d, u) => {
       await refresh()
       notify(u.isActive ? `${u.username} deactivated and signed out` : `${u.username} reactivated`)
+    },
+    onError: setFailure,
+  })
+  const resetTwoStep = useMutation({
+    mutationFn: (u: UserRow) => api(`/users/${u.id}/reset-two-step`, { method: 'POST' }),
+    onMutate: () => setFailure(null),
+    onSuccess: async (_d, u) => {
+      await refresh()
+      notify(`${u.username} is signed out and sets up two-step sign-in again at the next sign-in`)
     },
     onError: setFailure,
   })
@@ -74,9 +83,17 @@ export function UsersPage() {
           <Flag tone="danger">Locked</Flag>
         ) : u.mustChangePassword ? (
           <Flag tone="warn">Temporary password</Flag>
+        ) : needsTwoStep(u.role) && !u.totpEnabledAt ? (
+          <Flag tone="warn">Two-step not set up</Flag>
         ) : (
           'Active'
         ),
+    },
+    {
+      key: 'twoStep',
+      header: 'Two-step',
+      hideBelow: 'lg',
+      cell: (u) => (u.totpEnabledAt ? <Flag tone="ok">On</Flag> : needsTwoStep(u.role) ? <Flag tone="warn">Off</Flag> : <Flag tone="muted">Not needed</Flag>),
     },
     {
       key: 'actions',
@@ -87,6 +104,18 @@ export function UsersPage() {
           <Button variant="quiet" className="h-7 px-2" onClick={() => setResetting(u)}>
             Reset password
           </Button>
+          {u.totpEnabledAt && u.id !== me.id ? (
+            <Button
+              variant="quiet"
+              className="h-7 px-2"
+              busy={resetTwoStep.isPending && resetTwoStep.variables?.id === u.id}
+              onClick={() => {
+                if (window.confirm(`Turn off two-step sign-in for ${u.username}? They are signed out and set it up again at the next sign-in. Use this when a phone is lost.`)) resetTwoStep.mutate(u)
+              }}
+            >
+              Reset two-step
+            </Button>
+          ) : null}
           {u.id !== me.id ? (
             <Button variant="quiet" className="h-7 px-2" busy={setActive.isPending && setActive.variables?.id === u.id} onClick={() => setActive.mutate(u)}>
               {u.isActive ? 'Deactivate' : 'Reactivate'}
