@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Navigate, Route, Routes } from 'react-router'
+import { Navigate, Route, Routes, useLocation } from 'react-router'
 import type { Permission } from '@onestop/shared'
 import { AppShell } from './layout/AppShell'
 import { PriceApprovalsPage } from './pages/PriceApprovals'
@@ -26,11 +26,30 @@ import { StockCountPage } from './pages/StockCount'
 import { SuppliersPage } from './pages/Suppliers'
 import { TwoStepCodePage, TwoStepSetupPage } from './pages/TwoStep'
 import { UsersPage } from './pages/Users'
+import { WelcomePage } from './pages/Welcome'
 import { SessionProvider, useMe, useSession } from './session'
 import { Alert, Button, EmptyState, Loading } from './ui'
 
 export function App() {
+  return (
+    <Routes>
+      {/* The public welcome page: company branding only, no business data. */}
+      <Route path="/" element={<WelcomeOrHome />} />
+      <Route path="*" element={<AuthenticatedApp />} />
+    </Routes>
+  )
+}
+
+/** Someone already signed in goes straight to their start page instead of the welcome page. */
+function WelcomeOrHome() {
   const me = useMe()
+  if (me.isPending) return <Loading label="Starting Onestopgam" />
+  return me.data ? <AuthenticatedApp /> : <WelcomePage />
+}
+
+function AuthenticatedApp() {
+  const me = useMe()
+  const location = useLocation()
 
   if (me.isPending) return <Loading label="Starting Onestopgam" />
   if (me.isError) {
@@ -45,7 +64,7 @@ export function App() {
       </div>
     )
   }
-  if (!me.data) return <LoginPage />
+  if (!me.data) return /^\/login\/?$/.test(location.pathname) ? <LoginPage /> : <Navigate to="/login" replace />
   if (me.data === 'two-step') return <TwoStepCodePage />
   if (me.data.user.mustChangePassword) return <ChangePasswordPage forced />
   if (me.data.twoStep.required && !me.data.twoStep.enabled) return <TwoStepSetupPage />
@@ -62,6 +81,7 @@ export function App() {
   return (
     <SessionProvider me={me.data}>
       <Routes>
+        <Route path="login" element={<Home />} />
         <Route element={<AppShell />}>
           <Route index element={<Home />} />
           <Route path="overview" element={<Require permission="overview.view"><OverviewPage /></Require>} />
