@@ -9,6 +9,7 @@ import { api, query } from '../api'
 import { ProductPicker } from '../components/ProductPicker'
 import { newIdempotencyKey } from '../forms'
 import { useSession } from '../session'
+import { DateRangeFilter } from '../components/DateRangeFilter'
 import type { DamageRow, Page, ProductDetail, ProductRow } from '../types'
 import { Alert, Button, DataTable, Dialog, EmptyState, ErrorAlert, Field, Flag, Input, PageHeader, Pagination, Select, Textarea, useNotify, type Column } from '../ui'
 
@@ -30,12 +31,24 @@ export function DamagesPage() {
   const [params, setParams] = useSearchParams()
   const status = (STATUSES.find((s) => s.value === params.get('status'))?.value ?? 'pending') as Status
   const page = Math.max(1, Number(params.get('page')) || 1)
+  const from = params.get('from') ?? ''
+  const to = params.get('to') ?? ''
+  const search = params.get('search') ?? ''
+  const update = (changes: Record<string, string | null>) => {
+    const next = new URLSearchParams(params)
+    for (const [key, value] of Object.entries(changes)) {
+      if (value) next.set(key, value)
+      else next.delete(key)
+    }
+    if (!('page' in changes)) next.delete('page')
+    setParams(next, { replace: true })
+  }
   const [reporting, setReporting] = useState(false)
   const [deciding, setDeciding] = useState<DamageRow | null>(null)
 
   const damages = useQuery({
-    queryKey: ['damages', division.id, { status, page }],
-    queryFn: () => api<Page<DamageRow> & { pending: number }>(`/damages${query({ status, page })}`),
+    queryKey: ['damages', division.id, { status, from, to, search, page }],
+    queryFn: () => api<Page<DamageRow> & { pending: number }>(`/damages${query({ status, from, to, search, page })}`),
     placeholderData: keepPreviousData,
   })
   const showValue = can('cost.view')
@@ -108,14 +121,22 @@ export function DamagesPage() {
           ) : undefined
         }
       />
-      <div className="mb-3 max-w-xs">
-        <Select aria-label="Show" value={status} onChange={(e) => setParams(e.target.value === 'pending' ? {} : { status: e.target.value }, { replace: true })}>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div className="w-56">
+        <Select aria-label="Show" value={status} onChange={(e) => update({ status: e.target.value === 'pending' ? null : e.target.value })}>
           {STATUSES.map((s) => (
             <option key={s.value} value={s.value}>
               {s.label}
             </option>
           ))}
         </Select>
+        </div>
+        <DateRangeFilter value={{ from, to }} onChange={(r) => update({ from: r.from || null, to: r.to || null })} />
+        {search ? (
+          <Button onClick={() => update({ search: null })}>
+            Number {search} ✕
+          </Button>
+        ) : null}
       </div>
       <ErrorAlert error={damages.error} className="mb-3" />
       <DataTable
@@ -131,7 +152,7 @@ export function DamagesPage() {
         }
         footer={
           damages.data && damages.data.total > 0 ? (
-            <Pagination page={page} pageSize={damages.data.pageSize} total={damages.data.total} noun="reports" onPage={(p) => setParams({ ...(status === 'pending' ? {} : { status }), ...(p > 1 ? { page: String(p) } : {}) }, { replace: true })} />
+            <Pagination page={page} pageSize={damages.data.pageSize} total={damages.data.total} noun="reports" onPage={(p) => update({ page: p > 1 ? String(p) : null })} />
           ) : undefined
         }
       />

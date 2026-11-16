@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { z } from 'zod'
 import { customerSchema, formatGMD } from '@onestop/shared'
 import { api, query } from '../api'
@@ -24,8 +24,15 @@ export function CustomersPage() {
   const manage = can('customer.manage')
   const [editing, setEditing] = useState<CustomerRow | 'new' | null>(null)
   const [filter, setFilter] = useState<Filter>('active')
-  const [typed, setTyped] = useState('')
-  const [search, setSearch] = useState('')
+  // The top-bar search links here with ?search=<name>.
+  const [params] = useSearchParams()
+  const linked = params.get('search') ?? ''
+  const [typed, setTyped] = useState(linked)
+  const [search, setSearch] = useState(linked)
+  useEffect(() => {
+    setTyped(linked)
+    setSearch(linked)
+  }, [linked])
   useEffect(() => {
     const timer = setTimeout(() => setSearch(typed.trim()), 250)
     return () => clearTimeout(timer)

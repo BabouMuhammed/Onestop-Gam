@@ -18,6 +18,7 @@ import { overviewRouter } from './routes/overview'
 import { productsRouter } from './routes/products'
 import { receiptsRouter } from './routes/receipts'
 import { salesRouter } from './routes/sales'
+import { searchRouter } from './routes/search'
 import { stockRouter } from './routes/stock'
 import { suppliersRouter } from './routes/suppliers'
 import { usersRouter } from './routes/users'
@@ -54,6 +55,7 @@ export function createApp() {
   api.use('/contracts', contractsRouter)
   api.use('/users', usersRouter)
   api.use('/audit', auditRouter)
+  api.use('/search', searchRouter)
   app.use('/api', api)
   app.use('/api', unknownRoute)
 

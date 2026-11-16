@@ -4,7 +4,7 @@ import { can, damageDecisionSchema, damageListQuerySchema, damageReportSchema, D
 import { audit } from '../audit'
 import { authOf, divisionOf, requirePermission } from '../auth/guards'
 import { Decimal, type Prisma, prisma, type Tx } from '../db'
-import { conflict, forbidden, HttpError, idParam, notFound, parse } from '../http'
+import { conflict, dayRange, forbidden, HttpError, idParam, notFound, parse } from '../http'
 import { changeStock, once } from '../stock'
 
 export const damagesRouter = Router()
@@ -38,6 +38,8 @@ damagesRouter.get('/', requirePermission('damage.view'), async (req, res) => {
     divisionId,
     ...visibleTo(req),
     decision: q.status === 'pending' ? { is: null } : q.status === 'approved' ? { is: { approved: true } } : q.status === 'rejected' ? { is: { approved: false } } : undefined,
+    createdAt: dayRange(q.from, q.to),
+    number: q.search ? { contains: q.search, mode: 'insensitive' } : undefined,
   }
   const [rows, total, pending] = await Promise.all([
     prisma.damageReport.findMany({

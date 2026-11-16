@@ -4,7 +4,7 @@ import { formatDate, formatGMD, receiptListQuerySchema, receiptReverseSchema, re
 import { audit } from '../audit'
 import { authOf, divisionOf, requirePermission } from '../auth/guards'
 import { Decimal, type Prisma, prisma, type Tx } from '../db'
-import { conflict, HttpError, idParam, notFound, parse } from '../http'
+import { conflict, dayRange, HttpError, idParam, notFound, parse } from '../http'
 import { changeStock, once } from '../stock'
 
 export const receiptsRouter = Router()
@@ -35,6 +35,7 @@ receiptsRouter.get('/', requirePermission('receipt.view'), async (req, res) => {
     divisionId,
     supplierId: q.supplierId,
     reversal: q.status === 'reversed' ? { isNot: null } : q.status === 'posted' ? { is: null } : undefined,
+    receivedOn: dayRange(q.from, q.to),
   }
   const [rows, total] = await Promise.all([
     prisma.stockReceipt.findMany({

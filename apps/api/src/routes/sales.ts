@@ -4,7 +4,7 @@ import { can, formatGMD, saleListQuerySchema, salePaymentSchema, saleSchema, sal
 import { audit } from '../audit'
 import { authOf, divisionOf, requirePermission } from '../auth/guards'
 import { Decimal, Prisma, prisma, type Tx } from '../db'
-import { conflict, forbidden, HttpError, idParam, notFound, parse } from '../http'
+import { conflict, dayRange, forbidden, HttpError, idParam, notFound, parse } from '../http'
 import { changeStock, once } from '../stock'
 
 export const salesRouter = Router()
@@ -78,6 +78,9 @@ salesRouter.get('/', requirePermission('sale.view'), async (req, res) => {
   if (q.status === 'unpaid') where.push(Prisma.sql`"voidedAt" IS NULL AND s."total" > "paid"`)
   if (q.status === 'voided') where.push(Prisma.sql`"voidedAt" IS NOT NULL`)
   if (q.search) where.push(Prisma.sql`s."number" ILIKE ${`%${escapeLike(q.search)}%`}`)
+  const days = dayRange(q.from, q.to)
+  if (days?.gte) where.push(Prisma.sql`s."createdAt" >= ${days.gte}`)
+  if (days?.lt) where.push(Prisma.sql`s."createdAt" < ${days.lt}`)
 
   const base = Prisma.sql`
     SELECT * FROM (
