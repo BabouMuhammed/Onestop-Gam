@@ -26,17 +26,14 @@ describe('division isolation', () => {
     expect((await manager.put(`/api/products/${world.lgb.product}/price`).send({ sellingPrice: '1' })).status).toBe(404)
   })
 
-  it("cannot adjust or count another division's stock", async () => {
+  it("cannot write off or count another division's stock", async () => {
     const manager = await signIn('qf.manager')
-    const adjust = await manager.post('/api/stock/adjustments').send({
-      productId: world.lgb.product, locationId: world.lgb.shelf, direction: 'IN', quantity: '5', note: 'test', idempotencyKey: randomUUID(),
-    })
-    expect(adjust.status).toBe(404)
+    const report = { quantity: '1', reason: 'BROKEN', note: 'test', idempotencyKey: randomUUID() }
+    const theirs = await manager.post('/api/damages').send({ ...report, productId: world.lgb.product, locationId: world.lgb.shelf })
+    expect(theirs.status).toBe(404)
 
     // Own product, other division's location.
-    const mixed = await manager.post('/api/stock/adjustments').send({
-      productId: world.qf.product, locationId: world.lgb.shelf, direction: 'IN', quantity: '5', note: 'test', idempotencyKey: randomUUID(),
-    })
+    const mixed = await manager.post('/api/damages').send({ ...report, productId: world.qf.product, locationId: world.lgb.shelf, idempotencyKey: randomUUID() })
     expect(mixed.status).toBe(404)
 
     const count = await manager.post('/api/stock/counts').send({
@@ -66,7 +63,7 @@ describe('role permissions', () => {
     expect((await cashier.post('/api/products').send({ name: 'X', unit: 'PIECE', tracksExpiry: false })).status).toBe(403)
     expect((await cashier.put(`/api/products/${world.qf.product}/price`).send({ sellingPrice: '1' })).status).toBe(403)
     expect((await cashier.post('/api/locations').send({ name: 'Shelf 9', type: 'SHELF' })).status).toBe(403)
-    expect((await cashier.post('/api/stock/adjustments').send({})).status).toBe(403)
+    expect((await cashier.post('/api/stock/counts').send({})).status).toBe(403)
     expect((await cashier.get(`/api/stock/count-sheet?locationId=${world.qf.shelf}`)).status).toBe(403)
     expect((await cashier.get('/api/overview')).status).toBe(403)
   })
@@ -76,7 +73,8 @@ describe('role permissions', () => {
     expect((await finance.get('/api/products')).status).toBe(200)
     expect((await finance.get('/api/audit')).status).toBe(200)
     expect((await finance.post('/api/products').send({ name: 'X', unit: 'PIECE', tracksExpiry: false })).status).toBe(403)
-    expect((await finance.post('/api/stock/adjustments').send({})).status).toBe(403)
+    expect((await finance.post('/api/stock/counts').send({})).status).toBe(403)
+    expect((await finance.post('/api/damages').send({})).status).toBe(403)
     expect((await finance.get('/api/users')).status).toBe(403)
   })
 

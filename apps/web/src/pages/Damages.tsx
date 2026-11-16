@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import {
   DAMAGE_REASON_LABELS, DAMAGE_REASONS, formatDateTime, formatGMD, formatQuantityWithUnit, quantityText, UNIT_LABELS, type DamageReason,
@@ -43,7 +43,13 @@ export function DamagesPage() {
     if (!('page' in changes)) next.delete('page')
     setParams(next, { replace: true })
   }
-  const [reporting, setReporting] = useState(false)
+  // The product page links here with ?report=<productId> to start a report for that item.
+  const reportFor = params.get('report')
+  const [reporting, setReporting] = useState(() => !!reportFor && can('damage.report'))
+  const closeReport = () => {
+    setReporting(false)
+    if (reportFor) update({ report: null })
+  }
   const [deciding, setDeciding] = useState<DamageRow | null>(null)
 
   const damages = useQuery({
@@ -156,8 +162,8 @@ export function DamagesPage() {
           ) : undefined
         }
       />
-      <Dialog open={reporting} onClose={() => setReporting(false)} title="Report damage">
-        <ReportForm onClose={() => setReporting(false)} />
+      <Dialog open={reporting} onClose={closeReport} title="Report damage">
+        <ReportForm onClose={closeReport} initialProductId={reportFor} />
       </Dialog>
       <Dialog open={deciding !== null} onClose={() => setDeciding(null)} title={deciding ? `Decide ${deciding.number}` : ''}>
         {deciding ? <DecisionForm damage={deciding} onClose={() => setDeciding(null)} /> : null}
@@ -168,11 +174,19 @@ export function DamagesPage() {
 
 const footer = '-mx-4 -mb-4 flex justify-end gap-2 border-t border-line bg-sunken px-4 py-3'
 
-function ReportForm({ onClose }: { onClose: () => void }) {
+function ReportForm({ onClose, initialProductId }: { onClose: () => void; initialProductId: string | null }) {
   const queryClient = useQueryClient()
   const notify = useNotify()
   const key = useRef(newIdempotencyKey())
-  const [product, setProduct] = useState<ProductRow | null>(null)
+  const [product, setProduct] = useState<Pick<ProductRow, 'id' | 'sku' | 'name' | 'unit'> | null>(null)
+  const initial = useQuery({
+    queryKey: ['product', initialProductId],
+    queryFn: () => api<ProductDetail>(`/products/${initialProductId}`),
+    enabled: !!initialProductId,
+  })
+  useEffect(() => {
+    if (initial.data) setProduct((current) => current ?? initial.data.product)
+  }, [initial.data])
   const [locationId, setLocationId] = useState('')
   const [quantity, setQuantity] = useState('')
   const [reason, setReason] = useState<DamageReason>('BROKEN')

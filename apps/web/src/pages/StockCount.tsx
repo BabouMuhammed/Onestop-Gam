@@ -218,7 +218,7 @@ export function StockCountPage() {
         ) : (
           <>
             <p className="mb-2 text-ink-2">
-              {counted.length} counted. These {differing.length} will change. Posting cannot be undone; a mistake is corrected with a new count or an adjustment.
+              {counted.length} counted. These {differing.length} will change. Posting cannot be undone; a mistake is corrected with a new count.
             </p>
             <div className="overflow-hidden rounded-md border border-line">
               <table className="w-full border-collapse text-base">

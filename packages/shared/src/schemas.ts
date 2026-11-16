@@ -71,16 +71,6 @@ export const productUpdateSchema = productSchema
 export const priceSchema = z.object({ sellingPrice: moneyText })
 export type PriceInput = z.infer<typeof priceSchema>
 
-export const adjustmentSchema = z.object({
-  productId: z.string().uuid(),
-  locationId: z.string().uuid('Choose a location'),
-  direction: z.enum(['IN', 'OUT']),
-  quantity: quantityText.refine((q) => Number(q) > 0, 'Enter a quantity above zero'),
-  note: trimmed(300),
-  idempotencyKey,
-})
-export type AdjustmentInput = z.infer<typeof adjustmentSchema>
-
 export const stockCountSchema = z.object({
   locationId: z.string().uuid(),
   lines: z

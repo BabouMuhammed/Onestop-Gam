@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { z } from 'zod'
-import { adjustmentSchema, listQuerySchema, stockCountSchema } from '@onestop/shared'
+import { listQuerySchema, stockCountSchema } from '@onestop/shared'
 import { audit } from '../audit'
 import { authOf, divisionOf, divisionsOf, requirePermission } from '../auth/guards'
 import { Decimal, prisma } from '../db'
@@ -8,46 +8,6 @@ import { HttpError, notFound, parse } from '../http'
 import { changeStock, once } from '../stock'
 
 export const stockRouter = Router()
-
-/** Add to or take from one product at one location, with a required reason. */
-stockRouter.post('/adjustments', requirePermission('stock.adjust'), async (req, res) => {
-  const divisionId = await divisionOf(req)
-  const input = parse(adjustmentSchema, req.body)
-  const { user } = authOf(req)
-
-  const result = await prisma.$transaction(async (tx) =>
-    once(tx, user.id, input.idempotencyKey, async () => {
-      const [product, location] = await Promise.all([
-        tx.product.findFirst({ where: { id: input.productId, divisionId, isActive: true } }),
-        tx.location.findFirst({ where: { id: input.locationId, divisionId, isActive: true } }),
-      ])
-      if (!product) throw notFound('Product')
-      if (!location) throw notFound('Location')
-
-      const amount = new Decimal(input.quantity)
-      const stock = await changeStock(tx, {
-        divisionId,
-        productId: product.id,
-        locationId: location.id,
-        change: { by: input.direction === 'IN' ? amount : amount.negated() },
-        type: 'ADJUSTMENT',
-        note: input.note,
-        userId: user.id,
-      })
-      await audit(tx, req, {
-        action: 'stock.adjusted',
-        entity: 'Product',
-        entityId: product.id,
-        divisionId,
-        summary: `${input.direction === 'IN' ? 'Added' : 'Removed'} ${input.quantity} of ${product.sku} at ${location.name}: ${input.note}`,
-        before: { quantity: stock.before },
-        after: { quantity: stock.after },
-      })
-      return { before: stock.before.toString(), after: stock.after.toString() }
-    }),
-  )
-  res.status(201).json(result)
-})
 
 /** The count sheet for one location: everything recorded there, with the quantity the system expects. */
 stockRouter.get('/count-sheet', requirePermission('stock.count'), async (req, res) => {

@@ -8,7 +8,7 @@ One system for Onestopgam Inc's two divisions, **Quality Foods** and **Le Gaye B
 - **Inventory.** Products, storage locations, and the quantity of each product at each location.
 - **Stock history.** Every change to stock is written to a permanent ledger with who, when and why.
 - **Stock count.** A count sheet per location, like the Excel sheets it replaces. Posting a count corrects the system figures.
-- **Stock adjustments.** Add or remove stock with a required reason.
+- **No free-form stock edits.** Stock changes only through receiving, sales, stock counts, approved damage reports and contract deliveries, so every change has a document behind it.
 - **Packs and sizes.** A product can record how many pieces are in each pack or box, and a size such as 1", DN 100 or 50mm.
 - **Suppliers and receiving.** Record each delivery: supplier, date, the supplier's invoice number, and one line per item with where it was put, how many arrived and what each cost. Posting adds the stock and sets the item's cost price. A posted receipt is never edited; a mistake is reversed, which takes the stock back out and keeps both records.
 - **Selling.** A till screen for scanning or searching items, with the basket kept on the device. Cash (with change), mobile money, bank transfer and cheque, in any mix. Receipts print at receipt-printer width.

@@ -202,9 +202,11 @@ describe('reversing a receipt', () => {
   it('is refused once some of the delivery has left the shelf', async () => {
     const manager = await signIn('qf.manager')
     const made = await manager.post('/api/receipts').send(receipt(world))
-    await manager.post('/api/stock/adjustments').send({
-      productId: world.qf.product, locationId: world.qf.shelf, direction: 'OUT', quantity: '5', note: 'Damaged', idempotencyKey: randomUUID(),
+    // Five found missing at a count.
+    const count = await manager.post('/api/stock/counts').send({
+      locationId: world.qf.shelf, lines: [{ productId: world.qf.product, counted: '19' }], idempotencyKey: randomUUID(),
     })
+    expect(count.status).toBe(201)
     const res = await manager.post(`/api/receipts/${made.body.id}/reverse`).send(reverse())
     expect(res.status).toBe(409)
     expect(res.body.error.message).toContain('QF-00001')

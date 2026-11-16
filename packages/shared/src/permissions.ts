@@ -20,7 +20,6 @@ const PERMISSION_TABLE = {
   'inventory.view': ['CEO', 'FINANCE', 'MANAGER', 'CASHIER'],
   'product.manage': ['CEO', 'MANAGER'],
   'price.set': ['CEO', 'MANAGER'],
-  'stock.adjust': ['CEO', 'MANAGER'],
   'stock.count': ['CEO', 'MANAGER'],
   'location.manage': ['CEO', 'MANAGER'],
   // Cost prices and what was paid to suppliers are kept from cashiers.
