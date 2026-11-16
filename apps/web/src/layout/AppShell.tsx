@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { ROLE_LABELS, type Permission } from '@onestop/shared'
 import { api } from '../api'
+import { GlobalSearch } from '../components/GlobalSearch'
 import { divisionBrand, useSession } from '../session'
 import { cn, Select } from '../ui'
 
@@ -185,6 +186,12 @@ export function AppShell() {
             <Menu className="size-5" aria-hidden />
           </button>
           <DivisionBar />
+          <div className="hidden w-64 shrink-0 sm:block lg:w-80">
+            <GlobalSearch />
+          </div>
+        </div>
+        <div className="border-b border-line px-3 py-2 sm:hidden">
+          <GlobalSearch />
         </div>
       </header>
 

@@ -140,6 +140,25 @@ export const dateText = z
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Choose a date')
   .refine((v) => !Number.isNaN(Date.parse(`${v}T00:00:00Z`)), 'Choose a real date')
 
+/** Optional from/to day filter for list pages. Both ends are whole days, inclusive. */
+export const dateRangeShape = { from: dateText.optional(), to: dateText.optional() }
+const rangeInOrder = (q: { from?: string; to?: string }) => !q.from || !q.to || q.from <= q.to
+const rangeMessage = { path: ['to'], message: 'The end date is before the start date' }
+
+export const AUDIT_AREAS = ['auth', 'user', 'product', 'stock', 'sale', 'payment', 'customer', 'supplier', 'location', 'damage', 'contract', 'price', 'shift', 'export'] as const
+export type AuditArea = (typeof AUDIT_AREAS)[number]
+export const auditListQuerySchema = listQuerySchema
+  .extend({
+    ...dateRangeShape,
+    userId: z.string().uuid().optional(),
+    area: z.enum(AUDIT_AREAS).optional(),
+    search: z.string().trim().max(80).optional(),
+  })
+  .refine(rangeInOrder, rangeMessage)
+export type AuditListQuery = z.infer<typeof auditListQuerySchema>
+
+export const searchQuerySchema = z.object({ q: z.string().trim().min(2, 'Type at least 2 characters').max(60) })
+
 /** Today as YYYY-MM-DD. The Gambia is on UTC all year, so UTC is the local date. */
 export const todayText = () => new Date().toISOString().slice(0, 10)
 
@@ -181,10 +200,13 @@ export type ReceiptInput = z.infer<typeof receiptSchema>
 export const receiptReverseSchema = z.object({ reason: trimmed(300), idempotencyKey })
 export type ReceiptReverseInput = z.infer<typeof receiptReverseSchema>
 
-export const receiptListQuerySchema = listQuerySchema.extend({
-  supplierId: z.string().uuid().optional(),
-  status: z.enum(['all', 'posted', 'reversed']).default('all'),
-})
+export const receiptListQuerySchema = listQuerySchema
+  .extend({
+    ...dateRangeShape,
+    supplierId: z.string().uuid().optional(),
+    status: z.enum(['all', 'posted', 'reversed']).default('all'),
+  })
+  .refine(rangeInOrder, rangeMessage)
 export type ReceiptListQuery = z.infer<typeof receiptListQuerySchema>
 
 export const customerSchema = z.object({
@@ -242,11 +264,14 @@ export type SalePaymentInput = z.infer<typeof salePaymentSchema>
 export const saleVoidSchema = z.object({ reason: trimmed(300), idempotencyKey })
 export type SaleVoidInput = z.infer<typeof saleVoidSchema>
 
-export const saleListQuerySchema = listQuerySchema.extend({
-  customerId: z.string().uuid().optional(),
-  status: z.enum(['all', 'unpaid', 'voided']).default('all'),
-  search: z.string().trim().max(40).optional(),
-})
+export const saleListQuerySchema = listQuerySchema
+  .extend({
+    ...dateRangeShape,
+    customerId: z.string().uuid().optional(),
+    status: z.enum(['all', 'unpaid', 'voided']).default('all'),
+    search: z.string().trim().max(40).optional(),
+  })
+  .refine(rangeInOrder, rangeMessage)
 export type SaleListQuery = z.infer<typeof saleListQuerySchema>
 
 export const customerListQuerySchema = z.object({
@@ -269,7 +294,9 @@ export const damageDecisionSchema = z
   .refine((d) => d.approved || !!d.note, { path: ['note'], message: 'Say why the report is rejected' })
 export type DamageDecisionInput = z.infer<typeof damageDecisionSchema>
 
-export const damageListQuerySchema = listQuerySchema.extend({ status: z.enum(['all', 'pending', 'approved', 'rejected']).default('all') })
+export const damageListQuerySchema = listQuerySchema
+  .extend({ ...dateRangeShape, status: z.enum(['all', 'pending', 'approved', 'rejected']).default('all'), search: z.string().trim().max(40).optional() })
+  .refine(rangeInOrder, rangeMessage)
 
 const notInFuture = dateText.refine((v) => v <= todayText(), 'The date cannot be in the future')
 const positiveQuantity = quantityText.refine((q) => Number(q) > 0, 'Enter a quantity above zero')

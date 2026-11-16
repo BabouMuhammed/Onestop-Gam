@@ -57,3 +57,15 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     error: { code: 'INTERNAL', message: isProduction ? 'Something went wrong on the server' : String(err?.message ?? err) },
   })
 }
+
+/**
+ * Turn an inclusive from/to pair of days (YYYY-MM-DD) into a timestamp range.
+ * The Gambia is on UTC all year, so a calendar day is a UTC day.
+ */
+export function dayRange(from?: string, to?: string): { gte?: Date; lt?: Date } | undefined {
+  if (!from && !to) return undefined
+  const range: { gte?: Date; lt?: Date } = {}
+  if (from) range.gte = new Date(`${from}T00:00:00Z`)
+  if (to) range.lt = new Date(new Date(`${to}T00:00:00Z`).getTime() + 86_400_000)
+  return range
+}

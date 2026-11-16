@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { formatDate, supplierSchema, type SupplierInput } from '@onestop/shared'
 import { api } from '../api'
 import { showFieldErrors } from '../forms'
@@ -19,6 +19,10 @@ export function SuppliersPage() {
   const [editing, setEditing] = useState<SupplierRow | 'new' | null>(null)
   const [failure, setFailure] = useState<unknown>(null)
   const suppliers = useQuery({ queryKey: ['suppliers', division.id], queryFn: () => api<{ rows: SupplierRow[] }>('/suppliers') })
+  // The top-bar search links here with ?search=<name>; show just the matches.
+  const [params, setParams] = useSearchParams()
+  const search = (params.get('search') ?? '').toLowerCase()
+  const shown = search ? suppliers.data?.rows.filter((r) => r.name.toLowerCase().includes(search)) : suppliers.data?.rows
 
   const setActive = useMutation({
     mutationFn: (s: SupplierRow) => api(`/suppliers/${s.id}`, { method: 'PATCH', body: { isActive: !s.isActive } }),
@@ -96,11 +100,19 @@ export function SuppliersPage() {
           ) : undefined
         }
       />
+      {search ? (
+        <p className="mb-3 text-sm text-ink-2">
+          Showing suppliers matching “{params.get('search')}”.{' '}
+          <button type="button" className="text-brand underline" onClick={() => setParams({}, { replace: true })}>
+            Show all
+          </button>
+        </p>
+      ) : null}
       <ErrorAlert error={suppliers.error ?? failure} className="mb-3" />
       <DataTable
         label="Suppliers"
         columns={columns}
-        rows={suppliers.data?.rows}
+        rows={shown}
         rowKey={(s) => s.id}
         loading={suppliers.isPending}
         empty={

@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router'
 import { formatDate, formatGMD, type ReceiptListQuery } from '@onestop/shared'
 import { api, query } from '../api'
 import { useSession } from '../session'
+import { DateRangeFilter } from '../components/DateRangeFilter'
 import type { Page, ReceiptRow, SupplierRow } from '../types'
 import { Button, ButtonLink, DataTable, EmptyState, ErrorAlert, Flag, PageHeader, Pagination, Select, type Column } from '../ui'
 
@@ -20,6 +21,8 @@ export function ReceiptsPage() {
   const supplierId = params.get('supplier') ?? ''
   const status = (STATUSES.find((s) => s.value === params.get('status'))?.value ?? 'all') as ReceiptListQuery['status']
   const page = Math.max(1, Number(params.get('page')) || 1)
+  const from = params.get('from') ?? ''
+  const to = params.get('to') ?? ''
 
   const update = (changes: Record<string, string | null>) => {
     const next = new URLSearchParams(params)
@@ -33,11 +36,11 @@ export function ReceiptsPage() {
 
   const suppliers = useQuery({ queryKey: ['suppliers', division.id], queryFn: () => api<{ rows: SupplierRow[] }>('/suppliers') })
   const receipts = useQuery({
-    queryKey: ['receipts', division.id, { supplierId, status, page }],
-    queryFn: () => api<Page<ReceiptRow>>(`/receipts${query({ supplierId, status, page })}`),
+    queryKey: ['receipts', division.id, { supplierId, status, from, to, page }],
+    queryFn: () => api<Page<ReceiptRow>>(`/receipts${query({ supplierId, status, from, to, page })}`),
     placeholderData: keepPreviousData,
   })
-  const filtered = !!supplierId || status !== 'all'
+  const filtered = !!supplierId || status !== 'all' || !!from || !!to
   const receive = can('stock.receive')
 
   const columns: Column<ReceiptRow>[] = [
@@ -95,6 +98,9 @@ export function ReceiptsPage() {
             </option>
           ))}
         </Select>
+      </div>
+      <div className="mb-3">
+        <DateRangeFilter value={{ from, to }} onChange={(r) => update({ from: r.from || null, to: r.to || null })} />
       </div>
 
       <ErrorAlert error={receipts.error} className="mb-3" />

@@ -5,6 +5,7 @@ import { useNavigate, useSearchParams } from 'react-router'
 import { formatDateTime, formatGMD, type SaleListQuery } from '@onestop/shared'
 import { api, query } from '../api'
 import { useSession } from '../session'
+import { DateRangeFilter } from '../components/DateRangeFilter'
 import type { CustomerRow, Page, SaleRow } from '../types'
 import { Button, ButtonLink, DataTable, EmptyState, ErrorAlert, Flag, Input, PageHeader, Pagination, Select, type Column } from '../ui'
 
@@ -22,6 +23,8 @@ export function SalesPage() {
   const status = (STATUSES.find((s) => s.value === params.get('status'))?.value ?? 'all') as SaleListQuery['status']
   const search = params.get('search') ?? ''
   const page = Math.max(1, Number(params.get('page')) || 1)
+  const from = params.get('from') ?? ''
+  const to = params.get('to') ?? ''
 
   const update = (changes: Record<string, string | null>) => {
     const next = new URLSearchParams(params)
@@ -43,11 +46,11 @@ export function SalesPage() {
 
   const customers = useQuery({ queryKey: ['customers', division.id, { filter: 'active', search: '' }], queryFn: () => api<{ rows: CustomerRow[] }>('/customers') })
   const sales = useQuery({
-    queryKey: ['sales', division.id, { customerId, status, search, page }],
-    queryFn: () => api<Page<SaleRow>>(`/sales${query({ customerId, status, search, page })}`),
+    queryKey: ['sales', division.id, { customerId, status, search, from, to, page }],
+    queryFn: () => api<Page<SaleRow>>(`/sales${query({ customerId, status, search, from, to, page })}`),
     placeholderData: keepPreviousData,
   })
-  const filtered = !!customerId || status !== 'all' || !!search
+  const filtered = !!customerId || status !== 'all' || !!search || !!from || !!to
   const cashier = user.role === 'CASHIER'
 
   const columns: Column<SaleRow>[] = [
@@ -110,6 +113,9 @@ export function SalesPage() {
           ))}
         </Select>
       </div>
+      <div className="mb-3">
+        <DateRangeFilter value={{ from, to }} onChange={(r) => update({ from: r.from || null, to: r.to || null })} />
+      </div>
 
       <ErrorAlert error={sales.error} className="mb-3" />
       <DataTable
@@ -122,7 +128,7 @@ export function SalesPage() {
         empty={
           filtered ? (
             <EmptyState title="No sales match" action={<Button onClick={() => { setTyped(''); setParams({}, { replace: true }) }}>Clear search and filters</Button>}>
-              Try another receipt number, customer or status.
+              Try another receipt number, customer, status or dates.
             </EmptyState>
           ) : (
             <EmptyState title="No sales yet" action={can('sale.create') ? <ButtonLink to="/pos" variant="primary">Make the first sale</ButtonLink> : undefined}>
