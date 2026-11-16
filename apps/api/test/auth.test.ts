@@ -24,7 +24,7 @@ describe('sign-in', () => {
     expect(me.body.user).toMatchObject({ username: 'qf.manager', role: 'MANAGER' })
     expect(me.body.user).not.toHaveProperty('passwordHash')
     expect(me.body.divisions.map((d: { name: string }) => d.name)).toEqual(['Quality Foods'])
-    expect(me.body.permissions).toContain('stock.adjust')
+    expect(me.body.permissions).toContain('stock.count')
     expect(me.body.permissions).not.toContain('user.manage')
   })
 

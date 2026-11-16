@@ -1,24 +1,24 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useParams } from 'react-router'
 import {
-  adjustmentSchema, formatDateTime, formatGMD, formatQuantityWithUnit, LOCATION_TYPE_LABELS, priceSchema, UNIT_LABELS, UNIT_NAMES,
-  type AdjustmentInput, type PriceInput,
+  formatDateTime, formatGMD, formatQuantityWithUnit, LOCATION_TYPE_LABELS, priceSchema, UNIT_LABELS, UNIT_NAMES,
+  type PriceInput,
 } from '@onestop/shared'
 import { api, ApiError } from '../api'
 import { MovementChange, movementColumns } from '../components/movements'
 import { ProductFormDialog } from '../components/ProductFormDialog'
-import { newIdempotencyKey, showFieldErrors } from '../forms'
+import { showFieldErrors } from '../forms'
 import { useSession } from '../session'
-import type { LocationRow, Movement, ProductDetail } from '../types'
-import { Alert, Button, DataTable, Dialog, EmptyState, ErrorAlert, Field, Flag, Input, Loading, PageHeader, Section, Select, Textarea, useNotify, type Column } from '../ui'
+import type { Movement, ProductDetail } from '../types'
+import { Alert, Button, ButtonLink, DataTable, Dialog, EmptyState, ErrorAlert, Field, Flag, Input, Loading, PageHeader, Section, useNotify, type Column } from '../ui'
 
 export function ProductDetailPage() {
   const { id = '' } = useParams()
   const { can } = useSession()
-  const [dialog, setDialog] = useState<'edit' | 'price' | 'adjust' | null>(null)
+  const [dialog, setDialog] = useState<'edit' | 'price' | null>(null)
   const detail = useQuery({ queryKey: ['product', id], queryFn: () => api<ProductDetail>(`/products/${id}`) })
 
   if (detail.isPending) return <Loading />
@@ -56,10 +56,9 @@ export function ProductDetailPage() {
           <>
             {can('product.manage') ? <Button onClick={() => setDialog('edit')}>Edit</Button> : null}
             {can('price.set') ? <Button onClick={() => setDialog('price')}>{product.sellingPrice === null ? 'Set price' : 'Change price'}</Button> : null}
-            {can('stock.adjust') && product.isActive ? (
-              <Button variant="primary" onClick={() => setDialog('adjust')}>
-                Adjust stock
-              </Button>
+            {/* Stock only leaves through a damage report a manager approves, never a free-form edit. */}
+            {can('damage.report') && product.isActive && Number(total) > 0 ? (
+              <ButtonLink to={`/damages?report=${product.id}`}>Report damage</ButtonLink>
             ) : null}
           </>
         }
@@ -147,9 +146,6 @@ export function ProductDetailPage() {
       <Dialog open={dialog === 'price'} onClose={() => setDialog(null)} title={product.sellingPrice === null ? 'Set selling price' : 'Change selling price'}>
         <PriceForm detail={detail.data} onClose={() => setDialog(null)} />
       </Dialog>
-      <Dialog open={dialog === 'adjust'} onClose={() => setDialog(null)} title="Adjust stock">
-        <AdjustForm detail={detail.data} onClose={() => setDialog(null)} />
-      </Dialog>
     </>
   )
 }
@@ -199,80 +195,6 @@ function PriceForm({ detail, onClose }: { detail: ProductDetail; onClose: () => 
         <Button onClick={onClose}>Cancel</Button>
         <Button type="submit" variant="primary" busy={save.isPending}>
           Save price
-        </Button>
-      </div>
-    </form>
-  )
-}
-
-function AdjustForm({ detail, onClose }: { detail: ProductDetail; onClose: () => void }) {
-  const { product, levels } = detail
-  const { division } = useSession()
-  const refresh = useRefresh(product.id)
-  const notify = useNotify()
-  const [failure, setFailure] = useState<unknown>(null)
-  // One key per opening of the dialog: a double click or a retry cannot apply the change twice.
-  const key = useRef(newIdempotencyKey())
-  const locations = useQuery({ queryKey: ['locations', division.id], queryFn: () => api<{ rows: LocationRow[] }>('/locations') })
-
-  const form = useForm<AdjustmentInput>({
-    resolver: zodResolver(adjustmentSchema),
-    defaultValues: { productId: product.id, locationId: levels[0]?.locationId ?? '', direction: 'IN', quantity: '', note: '', idempotencyKey: key.current },
-  })
-  const { errors } = form.formState
-  const direction = form.watch('direction')
-  const locationId = form.watch('locationId')
-  const here = levels.find((l) => l.locationId === locationId)?.quantity ?? '0'
-
-  const save = useMutation({
-    mutationFn: (input: AdjustmentInput) => api<{ after: string }>('/stock/adjustments', { method: 'POST', body: input }),
-    onSuccess: async ({ after }) => {
-      await refresh()
-      notify(`Stock adjusted. Now ${formatQuantityWithUnit(after, product.unit)} at this location`)
-      onClose()
-    },
-    onError: (error) => setFailure(showFieldErrors(error, form.setError, ['locationId', 'quantity', 'note']) ? null : error),
-  })
-
-  return (
-    <form noValidate className="space-y-3" onSubmit={form.handleSubmit((v) => { setFailure(null); save.mutate(v) })}>
-      <ErrorAlert error={failure} />
-      <p className="text-ink-2">{product.name}</p>
-      <fieldset>
-        <legend className="mb-1 text-sm font-medium text-ink-2">Change</legend>
-        <div className="grid grid-cols-2 gap-2">
-          {(['IN', 'OUT'] as const).map((value) => (
-            <label key={value} className={`flex h-control cursor-pointer items-center justify-center rounded-md border [@media(pointer:coarse)]:h-10 ${direction === value ? 'border-brand bg-brand-soft font-medium text-brand' : 'border-line-strong text-ink-2'}`}>
-              <input type="radio" value={value} className="sr-only" {...form.register('direction')} />
-              {value === 'IN' ? 'Add stock' : 'Remove stock'}
-            </label>
-          ))}
-        </div>
-      </fieldset>
-      <div className="grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-3">
-        <Field label="Location" hint={locationId ? `${formatQuantityWithUnit(here, product.unit)} here now` : undefined} error={errors.locationId?.message}>
-          {(a) => (
-            <Select {...a} {...form.register('locationId')}>
-              <option value="">Choose a location</option>
-              {locations.data?.rows.filter((l) => l.isActive).map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name}
-                </option>
-              ))}
-            </Select>
-          )}
-        </Field>
-        <Field label={`Quantity (${UNIT_LABELS[product.unit].many})`} error={errors.quantity?.message}>
-          {(a) => <Input {...a} inputMode="decimal" className="text-right" {...form.register('quantity')} />}
-        </Field>
-      </div>
-      <Field label="Reason" hint="Recorded in the stock history." error={errors.note?.message}>
-        {(a) => <Textarea {...a} rows={2} {...form.register('note')} />}
-      </Field>
-      <div className={dialogFooter}>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button type="submit" variant="primary" busy={save.isPending}>
-          {direction === 'IN' ? 'Add stock' : 'Remove stock'}
         </Button>
       </div>
     </form>

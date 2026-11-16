@@ -4,7 +4,7 @@ Work is done in phases. Each phase ends with passing tests and a review before t
 
 ## Phase 1: Foundation (done)
 
-Project setup, sign-in and roles, division isolation, design system, products, locations, stock levels and history, stock counts, adjustments, prices, users, audit log, opening stock import.
+Project setup, sign-in and roles, division isolation, design system, products, locations, stock levels and history, stock counts, prices, users, audit log, opening stock import.
 
 ## Phase 2: Suppliers and stock receiving (done)
 
@@ -60,7 +60,7 @@ Phase 3 was built for this: the till chooses each sale's id, so sending a sale t
 - A bracketed number in an item name, such as `(D350)` or `(900)`, is a selling price in dalasi. Thirteen Le Gaye Bi items carry one, including `(D3,500)` and `(D30,000)`.
 - Opening stock is dated on the day it was counted: 10/11/2026 for Quality Foods, 11/11/2026 for Le Gaye Bi Group.
 - `(50Pcs each)` in a name means the item is counted in packs of 50 pieces. `WHITE TAP (100 Pcs)` was left as written because its count carries the remark "ASKED IDA JALLOW".
-- Products may exist without a selling price. They can be counted and adjusted, and will not be sellable until a price is set.
+- Products may exist without a selling price. They can be received and counted, and will not be sellable until a price is set.
 - Cost price is captured when stock is received. A product's cost price is the unit cost on its most recent receipt that still stands; the history is on the receipts. Whether to value stock at average cost instead is a Finance decision for the finance phase.
 - A receipt records batch number and expiry date per line, but stock is not yet held per batch. That waits for the answer to the expiry question below.
 - Receiving is done by a manager or the CEO. Cashiers cannot receive stock or see costs.

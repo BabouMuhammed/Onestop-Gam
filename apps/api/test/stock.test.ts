@@ -8,63 +8,39 @@ beforeEach(async () => {
 })
 afterAll(() => prisma.$disconnect())
 
-const adjustment = (w: World, direction: 'IN' | 'OUT', quantity: string, key = randomUUID()) => ({
-  productId: w.qf.product, locationId: w.qf.shelf, direction, quantity, note: 'Test adjustment', idempotencyKey: key,
-})
+/** Put a quantity on the Quality Foods shelf the way staff would: with a stock count. */
+const setStock = async (manager: Awaited<ReturnType<typeof signIn>>, quantity: string, productId = world.qf.product) => {
+  const res = await manager.post('/api/stock/counts').send({ locationId: world.qf.shelf, lines: [{ productId, counted: quantity }], idempotencyKey: randomUUID() })
+  expect(res.status).toBe(201)
+}
 
 const quantityAt = async (productId: string, locationId: string) =>
   (await prisma.stockLevel.findUnique({ where: { productId_locationId: { productId, locationId } } }))?.quantity.toString() ?? '0'
 
-describe('stock adjustments', () => {
-  it('changes the quantity and writes a ledger row and an audit row', async () => {
+describe('stock rules', () => {
+  it('has no free-form stock adjustment: stock changes only through receiving, sales, counts, damages and contracts', async () => {
     const manager = await signIn('qf.manager')
-    const res = await manager.post('/api/stock/adjustments').send(adjustment(world, 'IN', '12.5'))
-    expect(res.status).toBe(201)
-    expect(res.body).toMatchObject({ before: '0', after: '12.5' })
-
-    const ledger = await prisma.stockMovement.findMany()
-    expect(ledger).toHaveLength(1)
-    expect(ledger[0]).toMatchObject({ type: 'ADJUSTMENT', note: 'Test adjustment' })
-    expect(ledger[0]!.quantityDelta.toString()).toBe('12.5')
-    expect(await prisma.auditLog.count({ where: { action: 'stock.adjusted' } })).toBe(1)
-  })
-
-  it('refuses to take out more than is there, and leaves the quantity untouched', async () => {
-    const manager = await signIn('qf.manager')
-    await manager.post('/api/stock/adjustments').send(adjustment(world, 'IN', '3'))
-    const res = await manager.post('/api/stock/adjustments').send(adjustment(world, 'OUT', '4'))
-    expect(res.status).toBe(409)
-    expect(await quantityAt(world.qf.product, world.qf.shelf)).toBe('3')
-    expect(await prisma.stockMovement.count()).toBe(1)
-  })
-
-  it('requires a reason and a positive quantity', async () => {
-    const manager = await signIn('qf.manager')
-    const res = await manager.post('/api/stock/adjustments').send({ ...adjustment(world, 'IN', '0'), note: '' })
-    expect(res.status).toBe(400)
-    expect(Object.keys(res.body.error.fields).sort()).toEqual(['note', 'quantity'])
-  })
-
-  it('applies a repeated submission once (double click, retry)', async () => {
-    const manager = await signIn('qf.manager')
-    const body = adjustment(world, 'IN', '5')
-    const [first, second] = await Promise.all([
-      manager.post('/api/stock/adjustments').send(body),
-      manager.post('/api/stock/adjustments').send(body),
-    ])
-    expect([first.status, second.status]).toEqual([201, 201])
-    const third = await manager.post('/api/stock/adjustments').send(body)
-    expect(third.body.replayed).toBe(true)
-    expect(await quantityAt(world.qf.product, world.qf.shelf)).toBe('5')
-    expect(await prisma.stockMovement.count()).toBe(1)
+    const res = await manager.post('/api/stock/adjustments').send({
+      productId: world.qf.product, locationId: world.qf.shelf, direction: 'IN', quantity: '5', note: 'test', idempotencyKey: randomUUID(),
+    })
+    expect(res.status).toBe(404)
+    expect(await prisma.stockMovement.count()).toBe(0)
+    expect((await manager.get('/api/auth/me')).body.permissions).not.toContain('stock.adjust')
   })
 
   it('never oversells when many people take the last units at the same moment', async () => {
     const manager = await signIn('qf.manager')
-    await manager.post('/api/stock/adjustments').send(adjustment(world, 'IN', '5'))
+    await prisma.product.update({ where: { id: world.qf.product }, data: { sellingPrice: '100.00' } })
+    await setStock(manager, '5')
 
     const attempts = await Promise.all(
-      Array.from({ length: 12 }, () => manager.post('/api/stock/adjustments').send(adjustment(world, 'OUT', '1'))),
+      Array.from({ length: 12 }, () =>
+        manager.post('/api/sales').send({
+          id: randomUUID(),
+          lines: [{ productId: world.qf.product, quantity: '1', unitPrice: '100.00' }],
+          payments: [{ method: 'CASH', amount: '100' }],
+        }),
+      ),
     )
     const statuses = attempts.map((r) => r.status)
     expect(statuses.filter((s) => s === 201)).toHaveLength(5)
@@ -81,8 +57,12 @@ describe('stock counts', () => {
   it('sets counted quantities and records only the lines that differ', async () => {
     const manager = await signIn('qf.manager')
     const second = (await manager.post('/api/products').send({ name: 'NESCAFE CLASSIC', unit: 'PIECE', tracksExpiry: false })).body.product
-    await manager.post('/api/stock/adjustments').send(adjustment(world, 'IN', '10'))
-    await manager.post('/api/stock/adjustments').send({ ...adjustment(world, 'IN', '7'), productId: second.id })
+    await prisma.stockLevel.createMany({
+      data: [
+        { productId: world.qf.product, locationId: world.qf.shelf, quantity: 10 },
+        { productId: second.id, locationId: world.qf.shelf, quantity: 7 },
+      ],
+    })
 
     const sheet = await manager.get(`/api/stock/count-sheet?locationId=${world.qf.shelf}`)
     expect(sheet.body.lines.map((l: { name: string; expected: string }) => [l.name, l.expected])).toEqual([
@@ -122,7 +102,7 @@ describe('stock counts', () => {
 describe('database rules', () => {
   it('rejects edits and deletes of the stock ledger and the audit log', async () => {
     const manager = await signIn('qf.manager')
-    await manager.post('/api/stock/adjustments').send(adjustment(world, 'IN', '5'))
+    await setStock(manager, '5')
     const movement = await prisma.stockMovement.findFirstOrThrow()
     await expect(prisma.stockMovement.update({ where: { id: movement.id }, data: { note: 'tampered' } })).rejects.toThrow()
     await expect(prisma.stockMovement.delete({ where: { id: movement.id } })).rejects.toThrow()
@@ -131,7 +111,7 @@ describe('database rules', () => {
 
   it('rejects a negative quantity even when written directly', async () => {
     const manager = await signIn('qf.manager')
-    await manager.post('/api/stock/adjustments').send(adjustment(world, 'IN', '5'))
+    await setStock(manager, '5')
     await expect(prisma.stockLevel.updateMany({ data: { quantity: -1 } })).rejects.toThrow()
   })
 })
@@ -192,7 +172,7 @@ describe('products and prices', () => {
 
   it('searches, filters by location and sorts', async () => {
     const manager = await signIn('qf.manager')
-    await manager.post('/api/stock/adjustments').send(adjustment(world, 'IN', '4'))
+    await setStock(manager, '4')
     await manager.post('/api/products').send({ name: '100% JUICE', unit: 'BOTTLE', tracksExpiry: true })
 
     expect((await manager.get('/api/products?search=oval')).body.rows).toHaveLength(1)

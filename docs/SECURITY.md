@@ -13,6 +13,7 @@ What protects the system today, where each rule lives, and what is still open.
 | Reading another division's data | The division comes from the signed-in user for managers and cashiers, never from the request. Every query is filtered by it; another division's record answers 404 | `auth/guards.ts`, every route |
 | Acting beyond a role | One permission table, enforced by the API on every route. The web app only hides what the API would refuse | `packages/shared/src/permissions.ts` |
 | Negative or double-counted stock | Row lock per product and location inside a transaction; a database CHECK rejects negative quantities; idempotency keys make a repeated submission a no-op | `apps/api/src/stock.ts`, migration `integrity_rules` |
+| Unexplained stock changes | There is no route that adds or removes stock freely. Stock moves only through receiving, sales, counts, damage reports (written off only after approval; a manager cannot approve their own report) and contract deliveries. Older ADJUSTMENT rows stay in the history | `apps/api/src/routes/stock.ts`, `test/stock.test.ts` |
 | Tampering with history | Stock ledger, price history, posted receipts, sales, payments, damage reports, contract items, orders, deliveries and contract payments, and the audit log are append-only: database triggers reject UPDATE and DELETE for every user, and no API route offers them | migration `integrity_rules`, `suppliers_and_receiving` |
 | Wrong totals or costs | Line costs and receipt totals are computed by the server from quantity and unit cost; a total sent by the client is ignored. Cost prices are left out of every response to a cashier | `routes/receipts.ts`, `routes/products.ts` |
 | Wrong prices at the till | The server sells at its own price. The till's price is only compared, and a difference stops the sale. Totals, change and balances are computed by the server | `routes/sales.ts` |
@@ -32,7 +33,7 @@ What protects the system today, where each rule lives, and what is still open.
 | Overview | Yes | Yes | Yes | No |
 | Add or edit products and locations | Yes | No | Yes | No |
 | Set prices | Yes | No | Yes | No |
-| Adjust stock, post counts | Yes | No | Yes | No |
+| Post stock counts | Yes | No | Yes | No |
 | View suppliers, receipts and cost prices | Yes | Yes | Yes | No |
 | Add or edit suppliers | Yes | No | Yes | No |
 | Receive stock, reverse a receipt | Yes | No | Yes | No |
