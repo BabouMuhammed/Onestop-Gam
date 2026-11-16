@@ -9,6 +9,7 @@ import { env } from './env'
 import { errorHandler, unknownRoute } from './http'
 import { auditRouter } from './routes/audit'
 import { customersRouter } from './routes/customers'
+import { damagesRouter } from './routes/damages'
 import { authRouter } from './routes/auth'
 import { locationsRouter } from './routes/locations'
 import { overviewRouter } from './routes/overview'
@@ -46,6 +47,7 @@ export function createApp() {
   api.use('/receipts', receiptsRouter)
   api.use('/customers', customersRouter)
   api.use('/sales', salesRouter)
+  api.use('/damages', damagesRouter)
   api.use('/users', usersRouter)
   api.use('/audit', auditRouter)
   app.use('/api', api)

@@ -14,6 +14,7 @@ One system for Onestopgam Inc's two divisions, **Quality Foods** and **Le Gaye B
 - **Selling.** A till screen for scanning or searching items, with the basket kept on the device. Cash (with change), mobile money, bank transfer and cheque, in any mix. Receipts print at receipt-printer width.
 - **Customers and credit.** A sale needs no customer. Paying less than the total needs a customer a manager has approved for credit; the balance is tracked and collected later.
 - **Voids.** A sale is never edited or deleted. A manager who did not ring it up, or the CEO, can void it: stock returns and each payment is refunded on record.
+- **Damages.** Anyone at the shop can report broken, expired, spoiled or missing stock. It is written off only when a manager who did not report it, or the CEO, approves; the loss keeps its value at cost.
 - **Barcodes.** A product can carry the code printed on its pack.
 - **Prices.** Products can exist without a selling price; managers set prices, and every change is logged.
 - **Users and audit log.** The CEO manages accounts; CEO and Finance can read the audit log.

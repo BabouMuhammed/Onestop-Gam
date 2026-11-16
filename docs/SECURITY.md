@@ -40,6 +40,9 @@ What protects the system today, where each rule lives, and what is still open.
 | View sales | All | All | All | Own, plus any still owed on |
 | Approve a customer for credit, deactivate a customer | Yes | No | Yes | No |
 | Void a sale | Yes | No | Not their own | No |
+| Report damage | Yes | No | Yes | Yes |
+| See damage reports | All | All | All | Own |
+| Approve or reject damage (writes stock off) | Yes | No | Not their own | No |
 | Manage users | Yes | No | No | No |
 | Read the audit log | Yes | Yes | No | No |
 
@@ -51,5 +54,5 @@ Finance is read-only for now. Whether Finance should record payments is an open 
 - **Backups.** `tools/backup.sh` and the restore steps are in [BACKUP.md](BACKUP.md), and were run end to end. They still have to be scheduled on the real server, with a copy kept off the machine.
 - **HTTPS and deployment.** Cookies are marked Secure only when `NODE_ENV=production`; production must sit behind HTTPS. No deployment has been set up, by design.
 - **Second factor.** CEO and Finance accounts would benefit from two-step sign-in.
-- **Separation of duties.** Write-offs (a later phase) must require a second person, as voids now do.
+- **Separation of duties.** Voids and damage write-offs both need a second person: a manager cannot decide a report or void a sale they made themselves. The CEO can.
 - **Report exports.** CSV and Excel exports must escape cells that start with `=`, `+`, `-` or `@`.

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { LOCATION_TYPES, PAYMENT_METHODS, ROLES, UNITS } from './permissions'
+import { DAMAGE_REASONS, LOCATION_TYPES, PAYMENT_METHODS, ROLES, UNITS } from './permissions'
 
 /**
  * Request shapes. The API validates every request against these; the web forms
@@ -253,3 +253,20 @@ export const customerListQuerySchema = z.object({
   search: z.string().trim().max(80).optional(),
   filter: z.enum(['active', 'owing', 'inactive']).default('active'),
 })
+
+export const damageReportSchema = z.object({
+  productId: z.string().uuid('Choose a product'),
+  locationId: z.string().uuid('Choose a location'),
+  quantity: quantityText.refine((q) => Number(q) > 0, 'Enter a quantity above zero'),
+  reason: z.enum(DAMAGE_REASONS),
+  note: trimmed(300),
+  idempotencyKey,
+})
+export type DamageReportInput = z.infer<typeof damageReportSchema>
+
+export const damageDecisionSchema = z
+  .object({ approved: z.boolean(), note: optionalText(300), idempotencyKey })
+  .refine((d) => d.approved || !!d.note, { path: ['note'], message: 'Say why the report is rejected' })
+export type DamageDecisionInput = z.infer<typeof damageDecisionSchema>
+
+export const damageListQuerySchema = listQuerySchema.extend({ status: z.enum(['all', 'pending', 'approved', 'rejected']).default('all') })
