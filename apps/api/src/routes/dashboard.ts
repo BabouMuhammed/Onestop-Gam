@@ -176,6 +176,10 @@ dashboardRouter.get('/', requirePermission('overview.view'), async (req, res) =>
           },
         }
       : {}),
+    // Closed till sessions in the last 7 days whose count did not match.
+    cashDifferences: await prisma.cashShiftClose.count({
+      where: { difference: { not: 0 }, createdAt: { gte: new Date(Date.now() - 7 * 86_400_000) }, shift: { divisionId: { in: ids } } },
+    }),
     ...(can(user.role, 'price.approve')
       ? { pendingPriceRequests: await prisma.priceChangeRequest.count({ where: { divisionId: { in: ids }, decision: { is: null } } }) }
       : {}),

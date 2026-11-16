@@ -103,6 +103,7 @@ model Division {
   damages   DamageReport[]
   contracts Contract[]
   priceRequests PriceChangeRequest[]
+  shifts    CashShift[]
 }
 
 model User {
@@ -356,10 +357,13 @@ model Sale {
   cashTendered Decimal? @db.Decimal(14, 2)
   changeGiven  Decimal  @default(0) @db.Decimal(14, 2)
   note         String?
+  /// The till session it was rung up in. Empty only for sales made before cash-ups existed.
+  shiftId      String?
   createdAt    DateTime @default(now())
 
   division  Division        @relation(fields: [divisionId], references: [id])
   customer  Customer?       @relation(fields: [customerId], references: [id])
+  shift     CashShift?      @relation(fields: [shiftId], references: [id])
   lines     SaleLine[]
   payments  Payment[]
   void      SaleVoid?
@@ -412,10 +416,13 @@ model Payment {
   /// Mobile money or bank transaction reference, or cheque number.
   reference  String?
   userId     String
+  /// The till session whose drawer the money went into (or came out of, for a refund).
+  shiftId    String?
   createdAt  DateTime      @default(now())
 
   division Division @relation(fields: [divisionId], references: [id])
   sale     Sale     @relation(fields: [saleId], references: [id])
+  shift    CashShift? @relation(fields: [shiftId], references: [id])
 
   @@index([saleId])
   @@index([divisionId, createdAt])
@@ -671,6 +678,41 @@ model PriceChangeDecision {
   createdAt DateTime @default(now())
 
   request PriceChangeRequest @relation(fields: [requestId], references: [id])
+}
+
+/// One person's session at a till, from opening with a float to the cash count at close.
+/// A person has at most one open session per division. Append-only.
+model CashShift {
+  id           String   @id @default(uuid())
+  divisionId   String
+  userId       String
+  openingFloat Decimal  @db.Decimal(14, 2)
+  openedAt     DateTime @default(now())
+
+  division Division        @relation(fields: [divisionId], references: [id])
+  close    CashShiftClose?
+  sales    Sale[]
+  payments Payment[]
+
+  @@index([divisionId, openedAt])
+  @@index([userId, divisionId])
+}
+
+/// The close of a till session: cash counted without seeing the expected figure first.
+/// One per session; the unique shiftId makes a second close impossible.
+model CashShiftClose {
+  id           String   @id @default(uuid())
+  shiftId      String   @unique
+  /// Float plus cash taken, less cash refunded, in this session. Worked out by the server.
+  expectedCash Decimal  @db.Decimal(14, 2)
+  countedCash  Decimal  @db.Decimal(14, 2)
+  /// Counted minus expected: below zero is a shortage, above zero is over.
+  difference   Decimal  @db.Decimal(14, 2)
+  note         String?
+  closedBy     String
+  createdAt    DateTime @default(now())
+
+  shift CashShift @relation(fields: [shiftId], references: [id])
 }
 
 /// Makes a repeated submission (double click, retry after a dropped connection) a no-op.

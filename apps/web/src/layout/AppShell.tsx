@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ClipboardCheck, KeyRound, LayoutDashboard, FileText, LogOut, Menu, PackageX, Package, PackagePlus, Receipt, ScrollText, ShoppingCart, Truck, UserRound, Users, Warehouse, X, type LucideIcon, BadgeCheck } from 'lucide-react'
+import { ClipboardCheck, KeyRound, LayoutDashboard, FileText, LogOut, Menu, PackageX, Package, PackagePlus, Receipt, ScrollText, ShoppingCart, Truck, UserRound, Users, Warehouse, X, type LucideIcon, BadgeCheck, Banknote } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { ROLE_LABELS, type Permission } from '@onestop/shared'
@@ -24,6 +24,7 @@ function useNavigation(): { heading?: string; items: NavItem[] }[] {
     { to: '/sales', label: user.role === 'CASHIER' ? 'My sales' : 'Sales', icon: Receipt, permission: 'sale.view' },
     { to: '/customers', label: 'Customers', icon: UserRound, permission: 'customer.view' },
     { to: '/contracts', label: 'Contracts', icon: FileText, permission: 'contract.view' },
+    { to: '/cash-ups', label: 'Cash-ups', icon: Banknote, permission: 'shift.view' },
     { to: '/inventory', label: user.role === 'CASHIER' ? 'Product lookup' : 'Inventory', icon: Package, permission: 'inventory.view' },
     { to: '/receiving', label: 'Receiving', icon: PackagePlus, permission: 'receipt.view' },
     { to: '/stock-count', label: 'Stock count', icon: ClipboardCheck, permission: 'stock.count' },
@@ -38,9 +39,9 @@ function useNavigation(): { heading?: string; items: NavItem[] }[] {
   ]
   return [
     { items: main.slice(0, 1) },
-    { heading: 'Selling', items: main.slice(1, 5) },
-    { heading: 'Stock', items: main.slice(5, 9) },
-    { heading: 'Setup', items: main.slice(9) },
+    { heading: 'Selling', items: main.slice(1, 6) },
+    { heading: 'Stock', items: main.slice(6, 10) },
+    { heading: 'Setup', items: main.slice(10) },
     { heading: 'Admin', items: admin },
   ].map((group) => ({ ...group, items: group.items.filter((i) => can(i.permission)) })).filter((group) => group.items.length > 0)
 }
