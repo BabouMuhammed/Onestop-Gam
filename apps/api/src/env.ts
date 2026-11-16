@@ -19,6 +19,12 @@ const schema = z.object({
   // Encrypts two-step sign-in secrets at rest. Long and random; Render generates one. Changing it
   // means everyone with two-step sign-in has to set it up again.
   TOTP_ENCRYPTION_KEY: z.string().optional(),
+  // Two-step sign-in for CEO and Finance. Set to false to switch it off for everyone (no code
+  // asked, no setup forced); existing setups are kept and work again when it is switched back on.
+  REQUIRE_TWO_STEP: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
 })
 
 const parsed = schema.safeParse(process.env)

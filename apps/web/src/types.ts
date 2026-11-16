@@ -10,7 +10,8 @@ export interface Me {
   user: { id: string; username: string; name: string; role: Role; divisionId: string | null; mustChangePassword: boolean }
   permissions: Permission[]
   divisions: Division[]
-  twoStep: { required: boolean; enabled: boolean }
+  /** switchedOn: two-step sign-in is enforced on this server (REQUIRE_TWO_STEP). */
+  twoStep: { required: boolean; enabled: boolean; switchedOn: boolean }
 }
 
 export interface Page<T> {

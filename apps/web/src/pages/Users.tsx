@@ -17,7 +17,8 @@ interface Issued {
 }
 
 export function UsersPage() {
-  const { divisions, user: me } = useSession()
+  const { divisions, user: me, twoStep } = useSession()
+  const twoStepOn = twoStep.switchedOn
   const queryClient = useQueryClient()
   const notify = useNotify()
   const [adding, setAdding] = useState(false)
@@ -83,7 +84,7 @@ export function UsersPage() {
           <Flag tone="danger">Locked</Flag>
         ) : u.mustChangePassword ? (
           <Flag tone="warn">Temporary password</Flag>
-        ) : needsTwoStep(u.role) && !u.totpEnabledAt ? (
+        ) : twoStepOn && needsTwoStep(u.role) && !u.totpEnabledAt ? (
           <Flag tone="warn">Two-step not set up</Flag>
         ) : (
           'Active'
@@ -93,7 +94,16 @@ export function UsersPage() {
       key: 'twoStep',
       header: 'Two-step',
       hideBelow: 'lg',
-      cell: (u) => (u.totpEnabledAt ? <Flag tone="ok">On</Flag> : needsTwoStep(u.role) ? <Flag tone="warn">Off</Flag> : <Flag tone="muted">Not needed</Flag>),
+      cell: (u) =>
+        !twoStepOn ? (
+          <Flag tone="muted">Switched off</Flag>
+        ) : u.totpEnabledAt ? (
+          <Flag tone="ok">On</Flag>
+        ) : needsTwoStep(u.role) ? (
+          <Flag tone="warn">Off</Flag>
+        ) : (
+          <Flag tone="muted">Not needed</Flag>
+        ),
     },
     {
       key: 'actions',
@@ -104,7 +114,7 @@ export function UsersPage() {
           <Button variant="quiet" className="h-7 px-2" onClick={() => setResetting(u)}>
             Reset password
           </Button>
-          {u.totpEnabledAt && u.id !== me.id ? (
+          {twoStepOn && u.totpEnabledAt && u.id !== me.id ? (
             <Button
               variant="quiet"
               className="h-7 px-2"
