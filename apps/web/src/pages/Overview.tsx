@@ -46,12 +46,14 @@ export function OverviewPage() {
   const marginPct = d?.margin && Number(d.margin.costedRevenue) > 0 ? (Number(d.margin.profit) / Number(d.margin.costedRevenue)) * 100 : null
   const coverage = d?.margin && Number(d.margin.revenue) > 0 ? Math.round((Number(d.margin.costedRevenue) / Number(d.margin.revenue)) * 100) : null
 
-  const withoutPrice = figures.data?.divisions.reduce((total, item) => total + item.withoutPrice, 0) ?? 0
-  const outOfStock = figures.data?.divisions.reduce((total, item) => total + item.outOfStock, 0) ?? 0
+  // Stock problems are named per division, so each link opens the list behind its number.
+  const many = (figures.data?.divisions.length ?? 0) > 1
   const attention = [
-    { count: d?.damages.pending ?? 0, label: 'damage reports waiting for a decision', to: '/damages' },
-    { count: withoutPrice, label: 'products without a selling price', to: '/inventory?filter=no_price' },
-    { count: outOfStock, label: 'products out of stock', to: '/inventory?filter=out_of_stock' },
+    ...(d && d.damages.pending > 0 ? [{ key: 'damages', count: d.damages.pending, label: 'damage reports waiting for a decision', to: '/damages', divisionId: null as string | null }] : []),
+    ...(figures.data?.divisions ?? []).flatMap((v) => [
+      { key: `price-${v.divisionId}`, count: v.withoutPrice, label: `${many ? `${v.name} ` : ''}products without a selling price`, to: '/inventory?filter=no_price', divisionId: v.divisionId },
+      { key: `stock-${v.divisionId}`, count: v.outOfStock, label: `${many ? `${v.name} ` : ''}products out of stock`, to: '/inventory?filter=out_of_stock', divisionId: v.divisionId },
+    ]),
   ].filter((item) => item.count > 0)
 
   return (
@@ -118,10 +120,10 @@ export function OverviewPage() {
           {attention.length > 0 ? (
             <p className="mt-1.5 text-sm text-warn">
               Needs attention: {attention.map((item, index) => (
-                <span key={item.to}>
+                <span key={item.key}>
                   {index > 0 ? ' · ' : null}
                   <Link to={item.to} className="underline underline-offset-2" onClick={() => {
-                    if (scope !== 'all' && item.to.startsWith('/inventory')) setDivision(scope)
+                    if (item.divisionId) setDivision(item.divisionId)
                   }}>
                     {item.count} {item.label}
                   </Link>
