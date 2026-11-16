@@ -12,7 +12,7 @@ export async function resetDatabase() {
   const name = new URL(env.DATABASE_URL).pathname.slice(1)
   if (!name.endsWith('_test')) throw new Error(`Refusing to wipe "${name}": tests only run against a database ending in _test`)
   await prisma.$executeRawUnsafe(
-    'TRUNCATE "AuditLog", "IdempotencyKey", "PriceChange", "Payment", "SaleVoid", "SaleLine", "StockReceiptReversal", "StockReceiptLine", "StockMovement", "Sale", "Customer", "StockReceipt", "Supplier", "StockLevel", "Product", "Location", "Session", "User", "Division" CASCADE',
+    'TRUNCATE "AuditLog", "IdempotencyKey", "PriceChange", "DamageDecision", "Payment", "SaleVoid", "SaleLine", "StockReceiptReversal", "StockReceiptLine", "StockMovement", "Sale", "Customer", "DamageReport", "StockReceipt", "Supplier", "StockLevel", "Product", "Location", "Session", "User", "Division" CASCADE',
   )
 }
 

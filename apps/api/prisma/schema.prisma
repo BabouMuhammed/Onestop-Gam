@@ -44,6 +44,15 @@ enum MovementType {
   RECEIPT_REVERSAL
   SALE
   SALE_VOID
+  DAMAGE
+}
+
+enum DamageReason {
+  BROKEN
+  EXPIRED
+  SPOILED
+  MISSING
+  OTHER
 }
 
 enum PaymentMethod {
@@ -62,6 +71,7 @@ model Division {
   nextSkuNumber Int      @default(1)
   nextReceiptNumber Int  @default(1)
   nextSaleNumber Int     @default(1)
+  nextDamageNumber Int   @default(1)
   createdAt     DateTime @default(now())
 
   users     User[]
@@ -73,6 +83,7 @@ model Division {
   customers Customer[]
   sales     Sale[]
   payments  Payment[]
+  damages   DamageReport[]
 }
 
 model User {
@@ -123,6 +134,7 @@ model Location {
   levels    StockLevel[]
   movements StockMovement[]
   receiptLines StockReceiptLine[]
+  damages      DamageReport[]
 
   @@unique([divisionId, name])
 }
@@ -155,6 +167,7 @@ model Product {
   priceChanges PriceChange[]
   receiptLines StockReceiptLine[]
   saleLines    SaleLine[]
+  damages      DamageReport[]
 
   @@unique([divisionId, sku])
   @@unique([divisionId, name])
@@ -192,6 +205,8 @@ model StockMovement {
   receiptId     String?
   /// Set on movements written by a sale or its void.
   saleId        String?
+  /// Set on the movement written when a damage report is approved.
+  damageId      String?
   createdAt     DateTime     @default(now())
 
   division Division      @relation(fields: [divisionId], references: [id])
@@ -199,6 +214,7 @@ model StockMovement {
   location Location      @relation(fields: [locationId], references: [id])
   receipt  StockReceipt? @relation(fields: [receiptId], references: [id])
   sale     Sale?         @relation(fields: [saleId], references: [id])
+  damage   DamageReport? @relation(fields: [damageId], references: [id])
 
   @@index([productId, createdAt])
   @@index([divisionId, createdAt])
@@ -378,6 +394,45 @@ model Payment {
 
   @@index([saleId])
   @@index([divisionId, createdAt])
+}
+
+/// Stock found broken, expired, spoiled or missing. Reported by anyone at the shop, written off
+/// only when a manager who did not report it (or the CEO) approves. Never edited or deleted.
+model DamageReport {
+  id         String       @id @default(uuid())
+  divisionId String
+  /// e.g. QF-DMG-00003
+  number     String
+  productId  String
+  locationId String
+  quantity   Decimal      @db.Decimal(14, 3)
+  reason     DamageReason
+  note       String
+  reportedBy String
+  createdAt  DateTime     @default(now())
+
+  division  Division        @relation(fields: [divisionId], references: [id])
+  product   Product         @relation(fields: [productId], references: [id])
+  location  Location        @relation(fields: [locationId], references: [id])
+  decision  DamageDecision?
+  movements StockMovement[]
+
+  @@unique([divisionId, number])
+  @@index([divisionId, createdAt])
+}
+
+/// One per report. The unique damageId makes a second decision impossible.
+model DamageDecision {
+  id        String   @id @default(uuid())
+  damageId  String   @unique
+  approved  Boolean
+  note      String?
+  /// Cost price of one unit when approved, so the loss keeps its value if costs change later.
+  unitCost  Decimal? @db.Decimal(12, 2)
+  userId    String
+  createdAt DateTime @default(now())
+
+  damage DamageReport @relation(fields: [damageId], references: [id])
 }
 
 model PriceChange {

@@ -39,6 +39,10 @@ const PERMISSION_TABLE = {
   'sale.view': ['CEO', 'FINANCE', 'MANAGER', 'CASHIER'],
   'sale.void': ['CEO', 'MANAGER'],
   'payment.record': ['CEO', 'MANAGER', 'CASHIER'],
+  // Anyone at the shop can report damage; writing it off takes a manager who did not report it.
+  'damage.report': ['CEO', 'MANAGER', 'CASHIER'],
+  'damage.view': ['CEO', 'FINANCE', 'MANAGER', 'CASHIER'],
+  'damage.decide': ['CEO', 'MANAGER'],
   'user.manage': ['CEO'],
   'audit.view': ['CEO', 'FINANCE'],
 } as const satisfies Record<string, readonly Role[]>
@@ -87,7 +91,7 @@ export const LOCATION_TYPE_LABELS: Record<LocationType, string> = {
   OTHER: 'Other',
 }
 
-export const MOVEMENT_TYPES = ['OPENING', 'ADJUSTMENT', 'COUNT', 'RECEIPT', 'RECEIPT_REVERSAL', 'SALE', 'SALE_VOID'] as const
+export const MOVEMENT_TYPES = ['OPENING', 'ADJUSTMENT', 'COUNT', 'RECEIPT', 'RECEIPT_REVERSAL', 'SALE', 'SALE_VOID', 'DAMAGE'] as const
 export type MovementType = (typeof MOVEMENT_TYPES)[number]
 
 export const MOVEMENT_TYPE_LABELS: Record<MovementType, string> = {
@@ -98,6 +102,7 @@ export const MOVEMENT_TYPE_LABELS: Record<MovementType, string> = {
   RECEIPT_REVERSAL: 'Receipt reversed',
   SALE: 'Sold',
   SALE_VOID: 'Sale voided',
+  DAMAGE: 'Damaged, written off',
 }
 
 export const PAYMENT_METHODS = ['CASH', 'MOBILE_MONEY', 'BANK_TRANSFER', 'CHEQUE'] as const
@@ -120,3 +125,13 @@ export const PAYMENT_REFERENCE_LABELS: Record<PaymentMethod, string | null> = {
 
 /** The legal name printed on receipts and other documents. Division names come from the database. */
 export const COMPANY_NAME = 'Onestopgam Inc'
+
+export const DAMAGE_REASONS = ['BROKEN', 'EXPIRED', 'SPOILED', 'MISSING', 'OTHER'] as const
+export type DamageReason = (typeof DAMAGE_REASONS)[number]
+export const DAMAGE_REASON_LABELS: Record<DamageReason, string> = {
+  BROKEN: 'Broken',
+  EXPIRED: 'Expired',
+  SPOILED: 'Spoiled',
+  MISSING: 'Missing',
+  OTHER: 'Other',
+}

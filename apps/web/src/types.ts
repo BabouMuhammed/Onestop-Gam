@@ -1,4 +1,4 @@
-import type { LocationType, MovementType, PaymentMethod, Permission, Role, Unit } from '@onestop/shared'
+import type { DamageReason, LocationType, MovementType, PaymentMethod, Permission, Role, Unit } from '@onestop/shared'
 
 export interface Division {
   id: string
@@ -225,4 +225,21 @@ export interface SaleResult {
   paid: string
   change: string
   balance: string
+}
+
+export interface DamageRow {
+  id: string
+  number: string
+  createdAt: string
+  product: { id: string; sku: string; name: string; unit: Unit }
+  location: { id: string; name: string }
+  quantity: string
+  reason: DamageReason
+  note: string
+  reportedBy: string | null
+  reportedByMe: boolean
+  status: 'pending' | 'approved' | 'rejected'
+  decision: { note: string | null; createdAt: string; by: string | null } | null
+  /** Absent for roles that may not see costs; null when the item has no cost price. */
+  value?: string | null
 }
