@@ -14,9 +14,10 @@ What protects the system today, where each rule lives, and what is still open.
 | Acting beyond a role | One permission table, enforced by the API on every route. The web app only hides what the API would refuse | `packages/shared/src/permissions.ts` |
 | Negative or double-counted stock | Row lock per product and location inside a transaction; a database CHECK rejects negative quantities; idempotency keys make a repeated submission a no-op | `apps/api/src/stock.ts`, migration `integrity_rules` |
 | Unexplained stock changes | There is no route that adds or removes stock freely. Stock moves only through receiving, sales, counts, damage reports (written off only after approval; a manager cannot approve their own report) and contract deliveries. Older ADJUSTMENT rows stay in the history | `apps/api/src/routes/stock.ts`, `test/stock.test.ts` |
-| Tampering with history | Stock ledger, price history, posted receipts, sales, payments, damage reports, price requests and decisions, contract items, orders, deliveries and contract payments, and the audit log are append-only: database triggers reject UPDATE and DELETE for every user, and no API route offers them | migration `integrity_rules`, `suppliers_and_receiving` |
+| Tampering with history | Stock ledger, price history, posted receipts, sales, payments, damage reports, price requests and decisions, till sessions and their closes, contract items, orders, deliveries and contract payments, and the audit log are append-only: database triggers reject UPDATE and DELETE for every user, and no API route offers them | migration `integrity_rules`, `suppliers_and_receiving` |
 | Wrong totals or costs | Line costs and receipt totals are computed by the server from quantity and unit cost; a total sent by the client is ignored. Cost prices are left out of every response to a cashier | `routes/receipts.ts`, `routes/products.ts` |
 | Unapproved price changes | A manager's change to an existing price is stored as a request; the old price stays until the CEO approves. One request per product waits at a time, nobody decides their own, a request is decided once (unique decision row), and approval is refused if the price moved since it was asked. Requests and decisions are append-only | `routes/priceRequests.ts`, `test/prices.test.ts` |
+| Cash going missing from the drawer | Sales and sale payments need an open till session; every payment records which session's drawer it went into, and a void's cash refund comes out of the voider's open session. Expected cash (float + cash in − cash refunded) is computed by the server; the count at close is blind (the expected figure is hidden from the person on that till until they have counted). One open session per person per division (advisory lock), closed once (unique close row), a difference needs a note, and sessions and closes are append-only | `apps/api/src/shifts.ts`, `routes/shifts.ts`, `test/shifts.test.ts` |
 | Wrong prices at the till | The server sells at its own price. The till's price is only compared, and a difference stops the sale. Totals, change and balances are computed by the server | `routes/sales.ts` |
 | Voiding to hide theft | A cashier cannot void. A manager cannot void a sale they rang up; another manager or the CEO must. A void keeps the sale, restores the stock and writes a refund row per payment | `routes/sales.ts` |
 | Uncontrolled credit | A short payment needs a named customer whom a manager has approved for credit; cashiers cannot grant that approval | `routes/sales.ts`, `routes/customers.ts` |
@@ -44,6 +45,9 @@ What protects the system today, where each rule lives, and what is still open.
 | View sales | All | All | All | Own, plus any still owed on |
 | Approve a customer for credit, deactivate a customer | Yes | No | Yes | No |
 | Void a sale | Yes | No | Not their own | No |
+| Open and close their own till | Yes | No | Yes | Yes |
+| See cash-ups | All | All | All | Their own |
+| Close someone else's till | Yes | No | Yes | No |
 | Report damage | Yes | No | Yes | Yes |
 | See damage reports | All | All | All | Own |
 | Approve or reject damage (writes stock off) | Yes | No | Not their own | No |

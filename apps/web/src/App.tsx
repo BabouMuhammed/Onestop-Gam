@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router'
 import type { Permission } from '@onestop/shared'
 import { AppShell } from './layout/AppShell'
 import { PriceApprovalsPage } from './pages/PriceApprovals'
+import { CashUpsPage } from './pages/CashUps'
 import { AuditLogPage } from './pages/AuditLog'
 import { ChangePasswordPage } from './pages/ChangePassword'
 import { ContractDetailPage, DeliveryNotePage } from './pages/ContractDetail'
@@ -64,6 +65,7 @@ export function App() {
           <Route path="pos" element={<Require permission="sale.create"><PosPage /></Require>} />
           <Route path="sales" element={<Require permission="sale.view"><SalesPage /></Require>} />
           <Route path="sales/:id" element={<Require permission="sale.view"><SaleDetailPage /></Require>} />
+          <Route path="cash-ups" element={<Require permission="shift.view"><CashUpsPage /></Require>} />
           <Route path="contracts" element={<Require permission="contract.view"><ContractsPage /></Require>} />
           <Route path="contracts/new" element={<Require permission="contract.manage"><ContractNewPage /></Require>} />
           <Route path="contracts/:id" element={<Require permission="contract.view"><ContractDetailPage /></Require>} />

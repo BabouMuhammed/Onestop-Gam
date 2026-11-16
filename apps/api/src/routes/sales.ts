@@ -5,6 +5,7 @@ import { audit } from '../audit'
 import { authOf, divisionOf, requirePermission } from '../auth/guards'
 import { Decimal, Prisma, prisma, type Tx } from '../db'
 import { conflict, dayRange, forbidden, HttpError, idParam, notFound, parse } from '../http'
+import { requireOpenShift, openShiftOf } from '../shifts'
 import { changeStock, once } from '../stock'
 
 export const salesRouter = Router()
@@ -180,6 +181,7 @@ salesRouter.post('/', requirePermission('sale.create'), async (req, res) => {
     async (tx) =>
       // The till chooses the sale id, so a retry or a later sync of the same sale is recorded once.
       once(tx, user.id, input.id, async () => {
+        const shift = await requireOpenShift(tx, user.id, divisionId)
         const [customer, products, existing] = await Promise.all([
           input.customerId ? tx.customer.findFirst({ where: { id: input.customerId, divisionId, isActive: true } }) : null,
           tx.product.findMany({
@@ -252,6 +254,7 @@ salesRouter.post('/', requirePermission('sale.create'), async (req, res) => {
             number,
             customerId: customer?.id ?? null,
             userId: user.id,
+            shiftId: shift.id,
             total,
             cashTendered,
             changeGiven: change,
@@ -307,7 +310,7 @@ salesRouter.post('/', requirePermission('sale.create'), async (req, res) => {
         }))
         if (cashApplied.greaterThan(0)) paymentRows.push({ method: 'CASH', amount: cashApplied, reference: null })
         if (paymentRows.length) {
-          await tx.payment.createMany({ data: paymentRows.map((p) => ({ ...p, divisionId, saleId: input.id, userId: user.id })) })
+          await tx.payment.createMany({ data: paymentRows.map((p) => ({ ...p, divisionId, saleId: input.id, userId: user.id, shiftId: shift.id })) })
         }
 
         await audit(tx, req, {
@@ -334,6 +337,7 @@ salesRouter.post('/:id/payments', requirePermission('payment.record'), async (re
 
   const result = await prisma.$transaction(async (tx) =>
     once(tx, user.id, input.idempotencyKey, async () => {
+      const shift = await requireOpenShift(tx, user.id, divisionId)
       const sale = await lockSale(tx, id, divisionId)
       if (sale.voided) throw conflict('This sale was voided; no payment can be taken on it')
       if (!sale.outstanding.greaterThan(0)) throw conflict('This sale is already paid in full')
@@ -348,7 +352,7 @@ salesRouter.post('/:id/payments', requirePermission('payment.record'), async (re
       const applied = Decimal.min(given, sale.outstanding)
       const change = given.minus(applied)
       await tx.payment.create({
-        data: { divisionId, saleId: sale.id, method: input.payment.method, amount: applied, reference: input.payment.reference || null, userId: user.id },
+        data: { divisionId, saleId: sale.id, method: input.payment.method, amount: applied, reference: input.payment.reference || null, userId: user.id, shiftId: shift.id },
       })
       const balance = sale.outstanding.minus(applied)
       await audit(tx, req, {
@@ -411,6 +415,9 @@ salesRouter.post('/:id/void', requirePermission('sale.void'), async (req, res) =
         // Hand back what was paid, method by method, so each drawer and account still adds up.
         const paidByMethod = await tx.payment.groupBy({ by: ['method'], where: { saleId: sale.id }, _sum: { amount: true } })
         const refunds = paidByMethod.filter((p) => p._sum.amount?.greaterThan(0))
+        // Cash handed back comes out of the voider's open till, if they have one; otherwise it is
+        // paid from elsewhere (the safe) and no drawer's count changes.
+        const voiderShift = refunds.length ? await openShiftOf(tx, user.id, divisionId) : null
         if (refunds.length) {
           await tx.payment.createMany({
             data: refunds.map((p) => ({
@@ -420,6 +427,7 @@ salesRouter.post('/:id/void', requirePermission('sale.void'), async (req, res) =
               amount: p._sum.amount!.negated(),
               reference: `Refund: void of ${sale.number}`,
               userId: user.id,
+              shiftId: voiderShift?.id ?? null,
             })),
           })
         }

@@ -382,3 +382,20 @@ export const contractListQuerySchema = z.object({
   status: z.enum(['ACTIVE', 'COMPLETED', 'CANCELLED', 'all']).default('ACTIVE'),
   search: z.string().trim().max(80).optional(),
 })
+
+export const shiftOpenSchema = z.object({ openingFloat: moneyText, idempotencyKey })
+export type ShiftOpenInput = z.infer<typeof shiftOpenSchema>
+
+export const shiftCloseSchema = z.object({
+  countedCash: moneyText,
+  note: z.string().trim().max(300, 'At most 300 characters').optional(),
+  idempotencyKey,
+})
+export type ShiftCloseInput = z.infer<typeof shiftCloseSchema>
+
+export const shiftListQuerySchema = listQuerySchema
+  .extend({
+    ...dateRangeShape,
+    status: z.enum(['all', 'open', 'closed', 'difference']).default('all'),
+  })
+  .refine(rangeInOrder, rangeMessage)

@@ -20,6 +20,7 @@ import { productsRouter } from './routes/products'
 import { receiptsRouter } from './routes/receipts'
 import { salesRouter } from './routes/sales'
 import { searchRouter } from './routes/search'
+import { shiftsRouter } from './routes/shifts'
 import { stockRouter } from './routes/stock'
 import { suppliersRouter } from './routes/suppliers'
 import { usersRouter } from './routes/users'
@@ -53,6 +54,7 @@ export function createApp() {
   api.use('/receipts', receiptsRouter)
   api.use('/customers', customersRouter)
   api.use('/sales', salesRouter)
+  api.use('/shifts', shiftsRouter)
   api.use('/damages', damagesRouter)
   api.use('/contracts', contractsRouter)
   api.use('/users', usersRouter)

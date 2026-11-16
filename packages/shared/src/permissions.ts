@@ -40,6 +40,10 @@ const PERMISSION_TABLE = {
   'sale.view': ['CEO', 'FINANCE', 'MANAGER', 'CASHIER'],
   'sale.void': ['CEO', 'MANAGER'],
   'payment.record': ['CEO', 'MANAGER', 'CASHIER'],
+  /** Cash-ups. Cashiers only see their own till sessions. */
+  'shift.view': ['CEO', 'FINANCE', 'MANAGER', 'CASHIER'],
+  /** Close someone else's till session, e.g. when a cashier left without closing. */
+  'shift.manage': ['CEO', 'MANAGER'],
   // Anyone at the shop can report damage; writing it off takes a manager who did not report it.
   'damage.report': ['CEO', 'MANAGER', 'CASHIER'],
   'damage.view': ['CEO', 'FINANCE', 'MANAGER', 'CASHIER'],

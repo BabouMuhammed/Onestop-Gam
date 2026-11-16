@@ -6,6 +6,7 @@ import {
   formatGMD, formatQuantityWithUnit, moneyText, PAYMENT_METHOD_LABELS, PAYMENT_METHODS, PAYMENT_REFERENCE_LABELS, quantityText, UNIT_LABELS,
   type PaymentMethod, type SaleInput,
 } from '@onestop/shared'
+import { TillGate } from '../components/Till'
 import { api, ApiError } from '../api'
 import { ProductPicker } from '../components/ProductPicker'
 import { useSession } from '../session'
@@ -64,7 +65,16 @@ const validMoney = (text: string) => moneyText.safeParse(text.trim()).success &&
  * ready for the next one. Totals shown here are for the cashier's eyes: the server
  * prices the sale itself and refuses it if anything differs.
  */
+/** Selling needs an open till; the basket is kept while the till is opened. */
 export function PosPage() {
+  return (
+    <TillGate>
+      <Till />
+    </TillGate>
+  )
+}
+
+function Till() {
   const { division, user, can } = useSession()
   const queryClient = useQueryClient()
   const notify = useNotify()
@@ -153,6 +163,8 @@ export function PosPage() {
     },
     onError: async (error) => {
       if (error instanceof ApiError && ['PRICE_CHANGED', 'OUT_OF_STOCK', 'NO_PRICE'].includes(error.code)) await refresh()
+      // The till was closed (perhaps by a manager): go back to the open-till step. The basket is kept.
+      if (error instanceof ApiError && error.code === 'SHIFT_REQUIRED') await queryClient.invalidateQueries({ queryKey: ['shift'] })
     },
   })
 

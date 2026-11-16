@@ -12,7 +12,7 @@ export async function resetDatabase() {
   const name = new URL(env.DATABASE_URL).pathname.slice(1)
   if (!name.endsWith('_test')) throw new Error(`Refusing to wipe "${name}": tests only run against a database ending in _test`)
   await prisma.$executeRawUnsafe(
-    'TRUNCATE "AuditLog", "IdempotencyKey", "PriceChange", "PriceChangeDecision", "PriceChangeRequest", "DamageDecision", "ContractPayment", "ContractDeliveryReversal", "ContractDeliveryLine", "ContractOrderCancellation", "Payment", "SaleVoid", "SaleLine", "StockReceiptReversal", "StockReceiptLine", "StockMovement", "ContractDelivery", "ContractOrderLine", "ContractOrder", "ContractItem", "Contract", "Sale", "Customer", "DamageReport", "StockReceipt", "Supplier", "StockLevel", "Product", "Location", "Session", "User", "Division" CASCADE',
+    'TRUNCATE "AuditLog", "IdempotencyKey", "CashShiftClose", "CashShift", "PriceChange", "PriceChangeDecision", "PriceChangeRequest", "DamageDecision", "ContractPayment", "ContractDeliveryReversal", "ContractDeliveryLine", "ContractOrderCancellation", "Payment", "SaleVoid", "SaleLine", "StockReceiptReversal", "StockReceiptLine", "StockMovement", "ContractDelivery", "ContractOrderLine", "ContractOrder", "ContractItem", "Contract", "Sale", "Customer", "DamageReport", "StockReceipt", "Supplier", "StockLevel", "Product", "Location", "Session", "User", "Division" CASCADE',
   )
 }
 
@@ -21,8 +21,12 @@ export interface World {
   lgb: { id: string; shelf: string; product: string }
 }
 
-/** Two divisions, each with a location and a product, and one user per role. */
-export async function seedWorld(): Promise<World> {
+/**
+ * Two divisions, each with a location and a product, and one user per role. Unless
+ * `tills` is false, everyone who can sell starts with an open till (float D 0), so tests
+ * about something else can ring up sales straight away.
+ */
+export async function seedWorld({ tills = true }: { tills?: boolean } = {}): Promise<World> {
   await resetDatabase()
   const passwordHash = await hashPassword(PASSWORD)
   const qf = await prisma.division.create({ data: { code: 'QUALITY_FOODS', name: 'Quality Foods', skuPrefix: 'QF', nextSkuNumber: 2 } })
@@ -51,6 +55,12 @@ export async function seedWorld(): Promise<World> {
   const lgbProduct = await prisma.product.create({
     data: { divisionId: lgb.id, sku: 'LGB-00001', name: 'BASIN TAP', sellingPrice: '350.00' },
   })
+  if (tills) {
+    const sellers = await prisma.user.findMany({ where: { role: { in: ['CEO', 'MANAGER', 'CASHIER'] } }, select: { id: true, divisionId: true } })
+    await prisma.cashShift.createMany({
+      data: sellers.flatMap((u) => (u.divisionId ? [u.divisionId] : [qf.id, lgb.id]).map((divisionId) => ({ userId: u.id, divisionId, openingFloat: 0 }))),
+    })
+  }
   return {
     qf: { id: qf.id, shelf: qfShelf.id, fridge: qfFridge.id, product: qfProduct.id },
     lgb: { id: lgb.id, shelf: lgbShelf.id, product: lgbProduct.id },

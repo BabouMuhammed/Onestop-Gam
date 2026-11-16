@@ -331,6 +331,8 @@ export interface ContractDetail {
 export interface DashboardData {
   /** Only for those who approve prices. */
   pendingPriceRequests?: number
+  /** Closed till sessions in the last 7 days whose count did not match. */
+  cashDifferences: number
   generatedAt: string
   days: number
   divisions: { id: string; name: string; code: string }[]
