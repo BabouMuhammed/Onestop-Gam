@@ -42,8 +42,9 @@ export function App() {
 
 /** Someone already signed in goes straight to their start page instead of the welcome page. */
 function WelcomeOrHome() {
+  // Show the welcome page at once. The check below also wakes the server, which sleeps on the
+  // free plan; someone already signed in is moved on when it answers.
   const me = useMe()
-  if (me.isPending) return <Loading label="Starting Onestopgam" />
   return me.data ? <AuthenticatedApp /> : <WelcomePage />
 }
 
@@ -51,6 +52,9 @@ function AuthenticatedApp() {
   const me = useMe()
   const location = useLocation()
 
+  const onLogin = /^\/login\/?$/.test(location.pathname)
+  // The sign-in form needs nothing from the server to appear, so it does not wait for it.
+  if (onLogin && (me.isPending || me.isError)) return <LoginPage />
   if (me.isPending) return <Loading label="Starting Onestopgam" />
   if (me.isError) {
     return (
@@ -64,7 +68,7 @@ function AuthenticatedApp() {
       </div>
     )
   }
-  if (!me.data) return /^\/login\/?$/.test(location.pathname) ? <LoginPage /> : <Navigate to="/login" replace />
+  if (!me.data) return onLogin ? <LoginPage /> : <Navigate to="/login" replace />
   if (me.data === 'two-step') return <TwoStepCodePage />
   if (me.data.user.mustChangePassword) return <ChangePasswordPage forced />
   if (me.data.twoStep.required && !me.data.twoStep.enabled) return <TwoStepSetupPage />
