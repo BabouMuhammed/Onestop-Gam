@@ -1,6 +1,6 @@
 # Hosting a demo on Render
 
-`render.yaml` describes a demo: one free web service that runs the API and serves the web app, and one free PostgreSQL database. It deploys the `demo-deploy` branch.
+`render.yaml` describes a demo: one free web service that runs the API and serves the web app, and one free PostgreSQL database. It deploys the `main` branch, so every merged pull request is deployed.
 
 This is for showing the system, not for running the shops. On the free plan the service sleeps when idle and takes about a minute to wake, and the free database expires roughly 30 days after it is created. Confirm the current limits on Render's pricing page.
 

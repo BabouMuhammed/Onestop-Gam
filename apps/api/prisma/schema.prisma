@@ -45,6 +45,20 @@ enum MovementType {
   SALE
   SALE_VOID
   DAMAGE
+  CONTRACT_DELIVERY
+  CONTRACT_DELIVERY_REVERSAL
+}
+
+enum ContractType {
+  FIXED_SUPPLY
+  ONGOING_SUPPLY
+  PROJECT
+}
+
+enum ContractStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
 }
 
 enum DamageReason {
@@ -72,6 +86,9 @@ model Division {
   nextReceiptNumber Int  @default(1)
   nextSaleNumber Int     @default(1)
   nextDamageNumber Int   @default(1)
+  nextContractNumber Int @default(1)
+  nextOrderNumber Int    @default(1)
+  nextDeliveryNumber Int @default(1)
   createdAt     DateTime @default(now())
 
   users     User[]
@@ -84,6 +101,7 @@ model Division {
   sales     Sale[]
   payments  Payment[]
   damages   DamageReport[]
+  contracts Contract[]
 }
 
 model User {
@@ -168,6 +186,7 @@ model Product {
   receiptLines StockReceiptLine[]
   saleLines    SaleLine[]
   damages      DamageReport[]
+  contractItems ContractItem[]
 
   @@unique([divisionId, sku])
   @@unique([divisionId, name])
@@ -207,6 +226,8 @@ model StockMovement {
   saleId        String?
   /// Set on the movement written when a damage report is approved.
   damageId      String?
+  /// Set on movements written by a contract delivery or its reversal.
+  deliveryId    String?
   createdAt     DateTime     @default(now())
 
   division Division      @relation(fields: [divisionId], references: [id])
@@ -215,6 +236,7 @@ model StockMovement {
   receipt  StockReceipt? @relation(fields: [receiptId], references: [id])
   sale     Sale?         @relation(fields: [saleId], references: [id])
   damage   DamageReport? @relation(fields: [damageId], references: [id])
+  delivery ContractDelivery? @relation(fields: [deliveryId], references: [id])
 
   @@index([productId, createdAt])
   @@index([divisionId, createdAt])
@@ -310,8 +332,9 @@ model Customer {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  division Division @relation(fields: [divisionId], references: [id])
-  sales    Sale[]
+  division  Division   @relation(fields: [divisionId], references: [id])
+  sales     Sale[]
+  contracts Contract[]
 
   @@index([divisionId, name])
 }
@@ -433,6 +456,173 @@ model DamageDecision {
   createdAt DateTime @default(now())
 
   damage DamageReport @relation(fields: [damageId], references: [id])
+}
+
+/// An agreement to supply a customer. Fixed supply and project contracts agree quantities up
+/// front; ongoing supply agrees prices and the customer orders as needed. The header can be
+/// edited (with an audit record); orders, deliveries and payments are append-only.
+model Contract {
+  id          String         @id @default(uuid())
+  divisionId  String
+  /// e.g. LGB-CON-0003
+  number      String
+  customerId  String
+  type        ContractType
+  title       String
+  startDate   DateTime       @db.Date
+  endDate     DateTime?      @db.Date
+  /// Delivery address or project site.
+  siteAddress String?
+  notes       String?
+  status      ContractStatus @default(ACTIVE)
+  createdBy   String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  division   Division           @relation(fields: [divisionId], references: [id])
+  customer   Customer           @relation(fields: [customerId], references: [id])
+  items      ContractItem[]
+  orders     ContractOrder[]
+  deliveries ContractDelivery[]
+  payments   ContractPayment[]
+
+  @@unique([divisionId, number])
+  @@index([divisionId, status])
+  @@index([customerId])
+}
+
+model ContractItem {
+  id             String   @id @default(uuid())
+  contractId     String
+  position       Int
+  productId      String
+  agreedPrice    Decimal  @db.Decimal(12, 2)
+  /// Total agreed over the contract. Null on ongoing supply contracts.
+  agreedQuantity Decimal? @db.Decimal(14, 3)
+
+  contract   Contract            @relation(fields: [contractId], references: [id])
+  product    Product             @relation(fields: [productId], references: [id])
+  orderLines ContractOrderLine[]
+
+  @@unique([contractId, productId])
+}
+
+model ContractOrder {
+  id         String    @id @default(uuid())
+  contractId String
+  /// e.g. QF-ORD-00012
+  number     String
+  orderedOn  DateTime  @db.Date
+  requiredBy DateTime? @db.Date
+  /// The customer's own order number.
+  reference  String?
+  note       String?
+  userId     String
+  createdAt  DateTime  @default(now())
+
+  contract     Contract                 @relation(fields: [contractId], references: [id])
+  lines        ContractOrderLine[]
+  deliveries   ContractDelivery[]
+  cancellation ContractOrderCancellation?
+
+  @@index([contractId])
+}
+
+model ContractOrderLine {
+  id             String  @id @default(uuid())
+  orderId        String
+  contractItemId String
+  productId      String
+  quantity       Decimal @db.Decimal(14, 3)
+  /// The agreed price when the order was placed.
+  unitPrice      Decimal @db.Decimal(12, 2)
+
+  order         ContractOrder          @relation(fields: [orderId], references: [id])
+  contractItem  ContractItem           @relation(fields: [contractItemId], references: [id])
+  deliveryLines ContractDeliveryLine[]
+
+  @@index([orderId])
+}
+
+/// Closes an order: whatever was not yet delivered will not be.
+model ContractOrderCancellation {
+  id        String   @id @default(uuid())
+  orderId   String   @unique
+  reason    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  order ContractOrder @relation(fields: [orderId], references: [id])
+}
+
+model ContractDelivery {
+  id          String   @id @default(uuid())
+  divisionId  String
+  contractId  String
+  orderId     String
+  /// Delivery note number, e.g. LGB-DN-00007
+  number      String
+  deliveredOn DateTime @db.Date
+  /// Who signed for it at the customer's end.
+  receivedBy  String?
+  note        String?
+  /// Sum of the line totals, computed by the server.
+  value       Decimal  @db.Decimal(14, 2)
+  userId      String
+  createdAt   DateTime @default(now())
+
+  contract  Contract                 @relation(fields: [contractId], references: [id])
+  order     ContractOrder            @relation(fields: [orderId], references: [id])
+  lines     ContractDeliveryLine[]
+  reversal  ContractDeliveryReversal?
+  movements StockMovement[]
+
+  @@unique([divisionId, number])
+  @@index([contractId])
+}
+
+model ContractDeliveryLine {
+  id          String  @id @default(uuid())
+  deliveryId  String
+  orderLineId String
+  productId   String
+  quantity    Decimal @db.Decimal(14, 3)
+  unitPrice   Decimal @db.Decimal(12, 2)
+  lineTotal   Decimal @db.Decimal(14, 2)
+
+  delivery  ContractDelivery  @relation(fields: [deliveryId], references: [id])
+  orderLine ContractOrderLine @relation(fields: [orderLineId], references: [id])
+
+  @@index([deliveryId])
+  @@index([orderLineId])
+}
+
+model ContractDeliveryReversal {
+  id         String   @id @default(uuid())
+  deliveryId String   @unique
+  reason     String
+  userId     String
+  createdAt  DateTime @default(now())
+
+  delivery ContractDelivery @relation(fields: [deliveryId], references: [id])
+}
+
+/// Money collected from the customer against a contract. Append-only.
+model ContractPayment {
+  id         String        @id @default(uuid())
+  divisionId String
+  contractId String
+  method     PaymentMethod
+  amount     Decimal       @db.Decimal(14, 2)
+  reference  String?
+  receivedOn DateTime      @db.Date
+  note       String?
+  userId     String
+  createdAt  DateTime      @default(now())
+
+  contract Contract @relation(fields: [contractId], references: [id])
+
+  @@index([contractId])
 }
 
 model PriceChange {

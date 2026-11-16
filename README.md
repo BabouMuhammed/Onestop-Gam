@@ -2,7 +2,7 @@
 
 One system for Onestopgam Inc's two divisions, **Quality Foods** and **Le Gaye Bi Group**: inventory, and later sales, contracts and finance. Each division keeps its own records; the CEO and Finance see both.
 
-## What works today (Phases 1 to 3)
+## What works today
 
 - **Sign-in and roles.** CEO, Finance, Manager and Cashier, each limited to what the role may do. Managers and cashiers are confined to their own division.
 - **Inventory.** Products, storage locations, and the quantity of each product at each location.
@@ -15,12 +15,13 @@ One system for Onestopgam Inc's two divisions, **Quality Foods** and **Le Gaye B
 - **Customers and credit.** A sale needs no customer. Paying less than the total needs a customer a manager has approved for credit; the balance is tracked and collected later.
 - **Voids.** A sale is never edited or deleted. A manager who did not ring it up, or the CEO, can void it: stock returns and each payment is refunded on record.
 - **Damages.** Anyone at the shop can report broken, expired, spoiled or missing stock. It is written off only when a manager who did not report it, or the CEO, approves; the loss keeps its value at cost.
+- **Contracts.** Fixed supply, ongoing supply and project contracts with a customer: agreed items and prices (and quantities, except on ongoing supply), orders within the agreed quantities, deliveries in instalments that take stock and print a delivery note, and collections, including payment ahead of delivery up to the contract value. Mistaken deliveries are reversed, not edited.
 - **Barcodes.** A product can carry the code printed on its pack.
 - **Prices.** Products can exist without a selling price; managers set prices, and every change is logged.
 - **Users and audit log.** The CEO manages accounts; CEO and Finance can read the audit log.
 - **Opening stock import.** Loads a converted stock-count workbook as a division's starting stock.
 
-Not built yet: selling while offline, contracts, deliveries, damages, finance, reports. See [docs/ROADMAP.md](docs/ROADMAP.md).
+Not built yet: selling while offline, deliveries, damages, finance, reports. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Run it locally
 

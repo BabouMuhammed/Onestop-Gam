@@ -126,3 +126,20 @@
     color: #000;
   }
 }
+
+/* A full-width printed document such as a delivery note. Same rule as .print-area, at page width. */
+@media print {
+  .print-page,
+  .print-page * {
+    visibility: visible;
+  }
+  .print-page {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    border: 0;
+    padding: 0;
+    color: #000;
+  }
+}

@@ -15,7 +15,7 @@ services:
     name: onestop-demo
     runtime: node
     plan: free
-    branch: demo-deploy
+    branch: main
     # Build tools are dev dependencies, so they are installed even though NODE_ENV is production.
     buildCommand: npm ci --include=dev && npm run build
     # Apply reviewed migrations, make sure the divisions and first administrator exist, then start.

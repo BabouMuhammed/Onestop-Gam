@@ -1,4 +1,4 @@
-import type { DamageReason, LocationType, MovementType, PaymentMethod, Permission, Role, Unit } from '@onestop/shared'
+import type { ContractStatus, ContractType, DamageReason, LocationType, MovementType, PaymentMethod, Permission, Role, Unit } from '@onestop/shared'
 
 export interface Division {
   id: string
@@ -242,4 +242,69 @@ export interface DamageRow {
   decision: { note: string | null; createdAt: string; by: string | null } | null
   /** Absent for roles that may not see costs; null when the item has no cost price. */
   value?: string | null
+}
+
+type ProductRef = { id: string; sku: string; name: string; unit: Unit }
+
+export interface ContractRow {
+  id: string
+  number: string
+  title: string
+  type: ContractType
+  status: ContractStatus
+  customer: { id: string; name: string }
+  startDate: string
+  endDate: string | null
+  contractValue: string | null
+  deliveredValue: string
+  collected: string
+  owed: string
+  openOrders: number
+}
+
+export interface ContractDetail {
+  id: string
+  number: string
+  title: string
+  type: ContractType
+  status: ContractStatus
+  customer: { id: string; name: string; phone: string | null; address: string | null }
+  startDate: string
+  endDate: string | null
+  siteAddress: string | null
+  notes: string | null
+  createdAt: string
+  createdBy: string | null
+  contractValue: string | null
+  deliveredValue: string
+  collected: string
+  owed: string
+  collectable: string
+  items: { id: string; product: ProductRef; agreedPrice: string; agreedQuantity: string | null; ordered: string; delivered: string; leftToOrder: string | null }[]
+  orders: {
+    id: string
+    number: string
+    orderedOn: string
+    requiredBy: string | null
+    reference: string | null
+    note: string | null
+    status: 'open' | 'part_delivered' | 'delivered' | 'cancelled'
+    by: string | null
+    cancellation: { reason: string; createdAt: string; by: string | null } | null
+    value: string
+    lines: { id: string; product: ProductRef; quantity: string; unitPrice: string; delivered: string; outstanding: string }[]
+  }[]
+  deliveries: {
+    id: string
+    number: string
+    orderNumber: string
+    deliveredOn: string
+    receivedBy: string | null
+    note: string | null
+    value: string
+    by: string | null
+    reversal: { reason: string; createdAt: string; by: string | null } | null
+    lines: { id: string; product: ProductRef; quantity: string; unitPrice: string; lineTotal: string }[]
+  }[]
+  payments: { id: string; method: PaymentMethod; amount: string; reference: string | null; receivedOn: string; note: string | null; by: string | null }[]
 }

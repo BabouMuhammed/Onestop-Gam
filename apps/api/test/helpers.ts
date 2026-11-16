@@ -12,7 +12,7 @@ export async function resetDatabase() {
   const name = new URL(env.DATABASE_URL).pathname.slice(1)
   if (!name.endsWith('_test')) throw new Error(`Refusing to wipe "${name}": tests only run against a database ending in _test`)
   await prisma.$executeRawUnsafe(
-    'TRUNCATE "AuditLog", "IdempotencyKey", "PriceChange", "DamageDecision", "Payment", "SaleVoid", "SaleLine", "StockReceiptReversal", "StockReceiptLine", "StockMovement", "Sale", "Customer", "DamageReport", "StockReceipt", "Supplier", "StockLevel", "Product", "Location", "Session", "User", "Division" CASCADE',
+    'TRUNCATE "AuditLog", "IdempotencyKey", "PriceChange", "DamageDecision", "ContractPayment", "ContractDeliveryReversal", "ContractDeliveryLine", "ContractOrderCancellation", "Payment", "SaleVoid", "SaleLine", "StockReceiptReversal", "StockReceiptLine", "StockMovement", "ContractDelivery", "ContractOrderLine", "ContractOrder", "ContractItem", "Contract", "Sale", "Customer", "DamageReport", "StockReceipt", "Supplier", "StockLevel", "Product", "Location", "Session", "User", "Division" CASCADE',
   )
 }
 
@@ -38,6 +38,7 @@ export async function seedWorld(): Promise<World> {
       user('qf.manager', 'MANAGER', qf.id),
       user('qf.cashier', 'CASHIER', qf.id),
       user('qf.cashier2', 'CASHIER', qf.id),
+      user('lgb.cashier', 'CASHIER', lgb.id),
       user('qf.manager2', 'MANAGER', qf.id),
       user('lgb.manager', 'MANAGER', lgb.id),
     ],
