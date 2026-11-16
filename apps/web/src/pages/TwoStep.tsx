@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ShieldCheck } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { twoStepCodeSchema } from '@onestop/shared'
+import { useSignOut } from '../useSignOut'
 import { api, ApiError } from '../api'
 import { Alert, Button, ErrorAlert, Field, Input, Loading } from '../ui'
 
@@ -19,14 +20,6 @@ function Frame({ title, children }: { title: string; children: ReactNode }) {
       </div>
     </main>
   )
-}
-
-function useSignOut() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: () => api('/auth/logout', { method: 'POST' }),
-    onSettled: () => queryClient.setQueryData(['me'], null),
-  })
 }
 
 /** The second step of signing in: the 6-digit code from the authenticator app, or a recovery code. */
