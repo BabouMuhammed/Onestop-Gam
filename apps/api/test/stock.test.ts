@@ -99,6 +99,71 @@ describe('stock counts', () => {
   })
 })
 
+describe('counting all locations at once', () => {
+  it('lists every location in name order on one sheet, and posts them together', async () => {
+    const manager = await signIn('qf.manager')
+    await prisma.stockLevel.createMany({
+      data: [
+        { productId: world.qf.product, locationId: world.qf.shelf, quantity: 10 },
+        { productId: world.qf.product, locationId: world.qf.fridge, quantity: 4 },
+      ],
+    })
+
+    const sheet = await manager.get('/api/stock/count-sheet?locationId=all')
+    expect(sheet.status).toBe(200)
+    expect(sheet.body.location).toEqual({ id: 'all', name: 'All locations' })
+    // Fridge before Shelf 1, the same product once at each.
+    expect(sheet.body.lines.map((l: { locationName: string; expected: string }) => [l.locationName, l.expected])).toEqual([
+      ['Fridge', '4'],
+      ['Shelf 1', '10'],
+    ])
+
+    const res = await manager.post('/api/stock/counts').send({
+      lines: [
+        { productId: world.qf.product, locationId: world.qf.fridge, counted: '3' },
+        { productId: world.qf.product, locationId: world.qf.shelf, counted: '10' },
+      ],
+      idempotencyKey: randomUUID(),
+    })
+    expect(res.status).toBe(201)
+    expect(res.body).toMatchObject({ counted: 2, changed: 1, locations: 2 })
+    expect(await quantityAt(world.qf.product, world.qf.fridge)).toBe('3')
+    expect(await quantityAt(world.qf.product, world.qf.shelf)).toBe('10')
+    expect((await prisma.auditLog.findMany({ where: { action: 'stock.counted' }, orderBy: { summary: 'asc' } })).map((a) => a.summary)).toEqual([
+      'Counted 1 item at Fridge: 1 differed',
+      'Counted 1 item at Shelf 1: 0 differed',
+    ])
+  })
+
+  it('posts nothing when one line is wrong', async () => {
+    const manager = await signIn('qf.manager')
+    await prisma.stockLevel.create({ data: { productId: world.qf.product, locationId: world.qf.fridge, quantity: 4 } })
+    const res = await manager.post('/api/stock/counts').send({
+      lines: [
+        { productId: world.qf.product, locationId: world.qf.fridge, counted: '1' },
+        { productId: world.qf.product, locationId: world.lgb.shelf, counted: '1' },
+      ],
+      idempotencyKey: randomUUID(),
+    })
+    expect(res.status).toBe(404)
+    expect(await quantityAt(world.qf.product, world.qf.fridge)).toBe('4')
+  })
+
+  it('needs a location for every line and refuses the same item twice at one location', async () => {
+    const manager = await signIn('qf.manager')
+    const noLocation = await manager.post('/api/stock/counts').send({ lines: [{ productId: world.qf.product, counted: '1' }], idempotencyKey: randomUUID() })
+    expect(noLocation.status).toBe(400)
+    const twice = await manager.post('/api/stock/counts').send({
+      lines: [
+        { productId: world.qf.product, locationId: world.qf.shelf, counted: '1' },
+        { productId: world.qf.product, locationId: world.qf.shelf, counted: '2' },
+      ],
+      idempotencyKey: randomUUID(),
+    })
+    expect(twice.status).toBe(400)
+  })
+})
+
 describe('database rules', () => {
   it('rejects edits and deletes of the stock ledger and the audit log', async () => {
     const manager = await signIn('qf.manager')

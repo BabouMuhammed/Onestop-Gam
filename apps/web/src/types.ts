@@ -102,7 +102,7 @@ export interface LocationRow {
 
 export interface CountSheet {
   location: { id: string; name: string }
-  lines: { productId: string; sku: string; name: string; unit: Unit; expected: string }[]
+  lines: { productId: string; sku: string; name: string; unit: Unit; expected: string; locationId: string; locationName: string }[]
 }
 
 export interface DivisionFigures {
