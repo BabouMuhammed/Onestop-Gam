@@ -35,7 +35,8 @@ const PERMISSION_TABLE = {
   'customer.manage': ['CEO', 'MANAGER', 'CASHIER'],
   // Deciding who may buy on credit is a manager's call, never a cashier's.
   'customer.credit': ['CEO', 'MANAGER'],
-  'sale.create': ['CEO', 'MANAGER', 'CASHIER'],
+  // The CEO oversees sales but does not ring them up.
+  'sale.create': ['MANAGER', 'CASHIER'],
   // Cashiers see only the sales they rang up themselves; the API applies that on top of this.
   'sale.view': ['CEO', 'FINANCE', 'MANAGER', 'CASHIER'],
   'sale.void': ['CEO', 'MANAGER'],

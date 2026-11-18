@@ -83,9 +83,8 @@ describe('cash-up', () => {
     const results = await Promise.all([open(cashier), open(cashier), open(cashier)])
     expect(results.map((r) => r.status).sort()).toEqual([201, 409, 409])
     expect(await prisma.cashShift.count()).toBe(1)
-    // The CEO may have one open in each division.
-    expect((await open(await signIn('ceo', world.qf.id))).status).toBe(201)
-    expect((await open(await signIn('ceo', world.lgb.id))).status).toBe(201)
+    // The CEO does not sell, so has no till to open.
+    expect((await open(await signIn('ceo', world.qf.id))).status).toBe(403)
   })
 
   it("lets a manager close a cashier's till, but not another cashier", async () => {
