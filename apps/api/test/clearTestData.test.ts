@@ -40,7 +40,11 @@ describe('clearing test data', () => {
     expect((await prisma.stockMovement.findMany()).map((m) => m.type)).toEqual(['OPENING'])
     const product = await prisma.product.findUniqueOrThrow({ where: { id: rice } })
     expect([product.sellingPrice, product.costPrice]).toEqual([null, null])
-    // Products, locations and users stay; the clear itself is in the audit log.
+    // Every account but the CEO's is gone, and so are their sessions.
+    expect((await prisma.user.findMany()).map((u) => u.role)).toEqual(['CEO'])
+    expect(res.body.usersRemoved).toBeGreaterThan(0)
+    expect((await cashier.get('/api/auth/me')).status).toBe(401)
+    // Products and locations stay; the clear itself is in the audit log.
     expect(await prisma.product.count()).toBeGreaterThan(0)
     expect(await prisma.auditLog.count({ where: { action: 'system.test_data_cleared' } })).toBe(1)
 
