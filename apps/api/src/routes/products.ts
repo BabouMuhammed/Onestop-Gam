@@ -287,3 +287,32 @@ productsRouter.put('/:id/price', requirePermission('price.set'), async (req, res
   }
   res.json({ product: forViewer(req, result.product) })
 })
+
+/**
+ * Remove a selling price, leaving the product unpriced. CEO only: it undoes demo or
+ * mistaken prices. A manager's request still waiting on this product can no longer be
+ * approved, because the price it would change has moved.
+ */
+productsRouter.delete('/:id/price', requirePermission('price.approve'), async (req, res) => {
+  const divisionId = await divisionOf(req)
+  const product = await prisma.$transaction(async (tx) => {
+    const locked = await tx.$queryRaw<{ id: string; sku: string; name: string; sellingPrice: Prisma.Decimal | null }[]>`
+      SELECT "id", "sku", "name", "sellingPrice" FROM "Product"
+      WHERE "id" = ${idParam(req)} AND "divisionId" = ${divisionId} FOR UPDATE`
+    const before = locked[0]
+    if (!before) throw notFound('Product')
+    if (before.sellingPrice === null) throw conflict('This product has no price to remove')
+    const updated = await tx.product.update({ where: { id: before.id }, data: { sellingPrice: null } })
+    await audit(tx, req, {
+      action: 'product.price_removed',
+      entity: 'Product',
+      entityId: before.id,
+      divisionId,
+      summary: `Removed the price of ${before.sku} ${before.name} (was ${formatGMD(before.sellingPrice.toString())})`,
+      before: { sellingPrice: before.sellingPrice.toString() },
+      after: { sellingPrice: null },
+    })
+    return updated
+  })
+  res.json({ product: forViewer(req, product) })
+})

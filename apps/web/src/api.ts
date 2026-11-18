@@ -23,7 +23,7 @@ export function setSignedOutHandler(handler: () => void) {
 }
 
 interface Options {
-  method?: 'GET' | 'POST' | 'PATCH' | 'PUT'
+  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
   body?: unknown
   /** Override the active division. 'all' asks for both (CEO and Finance only). */
   division?: string | 'all'
