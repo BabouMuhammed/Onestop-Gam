@@ -44,9 +44,10 @@ describe('clearing test data', () => {
     expect((await prisma.user.findMany()).map((u) => u.role)).toEqual(['CEO'])
     expect(res.body.usersRemoved).toBeGreaterThan(0)
     expect((await cashier.get('/api/auth/me')).status).toBe(401)
-    // Products and locations stay; the clear itself is in the audit log.
+    // Products and locations stay.
     expect(await prisma.product.count()).toBeGreaterThan(0)
-    expect(await prisma.auditLog.count({ where: { action: 'system.test_data_cleared' } })).toBe(1)
+    // The audit log is emptied; the clear itself is its only entry.
+    expect((await prisma.auditLog.findMany()).map((a) => a.action)).toEqual(['system.test_data_cleared'])
 
     // The dashboard starts from zero again.
     const dashboard = await ceo.get('/api/dashboard')

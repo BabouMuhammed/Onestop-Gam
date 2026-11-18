@@ -15,7 +15,7 @@ const ACTIVITY_TABLES = [
   'ContractOrderCancellation', 'ContractOrderLine', 'ContractOrder', 'ContractItem', 'Contract',
   'Payment', 'SaleVoid', 'SaleLine', 'Sale', 'Customer',
   'StockReceiptReversal', 'StockReceiptLine', 'StockReceipt', 'Supplier',
-  'IdempotencyKey', 'StockMovement',
+  'IdempotencyKey', 'StockMovement', 'AuditLog',
 ] as const
 
 export interface ClearResult {
@@ -30,6 +30,7 @@ export interface ClearResult {
   openingMovementsKept: number
   pricesCleared: number
   usersRemoved: number
+  auditEntriesRemoved: number
 }
 
 const count = async (tx: { $queryRawUnsafe: typeof prisma.$queryRawUnsafe }, sql: string) =>
@@ -39,7 +40,8 @@ const count = async (tx: { $queryRawUnsafe: typeof prisma.$queryRawUnsafe }, sql
  * Put the system back to how it was right after the opening stock was loaded: every sale,
  * cash-up, receipt, damage, contract, customer, supplier and price is removed, and stock at
  * every location goes back to its opening count, and every account except the CEO's is
- * removed. Products, locations and the audit log stay. Both divisions, in one transaction: it all happens or none of it does.
+ * removed, and the audit log is emptied (the route then records the clear as its first
+ * entry). Products and locations stay. Both divisions, in one transaction: it all happens or none of it does.
  */
 export async function clearTestData(): Promise<ClearResult> {
   return prisma.$transaction(async (tx) => {
@@ -55,6 +57,7 @@ export async function clearTestData(): Promise<ClearResult> {
       openingMovementsKept: await count(tx, `SELECT count(*) AS n FROM "StockMovement" WHERE "type" = 'OPENING'`),
       pricesCleared: await count(tx, 'SELECT count(*) AS n FROM "Product" WHERE "sellingPrice" IS NOT NULL'),
       usersRemoved: await count(tx, `SELECT count(*) AS n FROM "User" WHERE "role" <> 'CEO'`),
+      auditEntriesRemoved: await count(tx, 'SELECT count(*) AS n FROM "AuditLog"'),
     }
 
     // The opening count is the only movement kept. Set it aside, empty the ledger with the

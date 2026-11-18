@@ -21,7 +21,7 @@ clearTestDataRouter.post('/', requirePermission('user.manage'), async (req, res)
   await audit(prisma, req, {
     action: 'system.test_data_cleared',
     entity: 'System',
-    summary: `Cleared test data: ${result.sales} sales, ${result.cashUps} cash-ups, ${result.receipts} receipts, ${result.damages} damage reports, ${result.contracts} contracts, ${result.customers} customers, ${result.suppliers} suppliers, ${result.pricesCleared} prices and ${result.usersRemoved} user accounts (all but the CEO). Stock reset to the opening count.`,
+    summary: `Cleared test data: ${result.sales} sales, ${result.cashUps} cash-ups, ${result.receipts} receipts, ${result.damages} damage reports, ${result.contracts} contracts, ${result.customers} customers, ${result.suppliers} suppliers, ${result.pricesCleared} prices and ${result.usersRemoved} user accounts (all but the CEO), and ${result.auditEntriesRemoved} earlier audit entries. Stock reset to the opening count.`,
     after: result,
   })
   res.json(result)
