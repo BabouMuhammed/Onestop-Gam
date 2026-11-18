@@ -76,20 +76,30 @@ export const priceDecisionSchema = z
   .refine((d) => d.approved || !!d.note, { path: ['note'], message: 'Say why the change is rejected' })
 export type PriceDecisionInput = z.infer<typeof priceDecisionSchema>
 
-export const stockCountSchema = z.object({
-  locationId: z.string().uuid(),
-  lines: z
-    .array(
-      z.object({
-        productId: z.string().uuid(),
-        counted: quantityText,
-        remark: z.string().trim().max(200).optional(),
-      }),
-    )
-    .min(1, 'Count at least one item')
-    .max(1000),
-  idempotencyKey,
-})
+/**
+ * A physical count. Either one location for the whole sheet (`locationId`), or a location on
+ * each line, for a count across all locations; a line's own location wins.
+ */
+export const stockCountSchema = z
+  .object({
+    locationId: z.string().uuid().optional(),
+    lines: z
+      .array(
+        z.object({
+          productId: z.string().uuid(),
+          locationId: z.string().uuid().optional(),
+          counted: quantityText,
+          remark: z.string().trim().max(200).optional(),
+        }),
+      )
+      .min(1, 'Count at least one item')
+      .max(2000),
+    idempotencyKey,
+  })
+  .refine((v) => v.locationId !== undefined || v.lines.every((l) => l.locationId !== undefined), {
+    path: ['locationId'],
+    message: 'Choose a location',
+  })
 export type StockCountInput = z.infer<typeof stockCountSchema>
 
 const username = z

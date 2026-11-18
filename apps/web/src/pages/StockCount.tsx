@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useMemo, useRef, useState } from 'react'
+import { Fragment, useMemo, useRef, useState } from 'react'
 import { formatQuantity, formatQuantityWithUnit, quantityText, UNIT_LABELS } from '@onestop/shared'
 import { api, query } from '../api'
 import { newIdempotencyKey } from '../forms'
@@ -12,9 +12,13 @@ interface Entry {
   remark: string
 }
 
+/** Counted figures are kept per item per location: the same item can sit in several places. */
+const entryKey = (line: { locationId: string; productId: string }) => `${line.locationId}:${line.productId}`
+
 /**
- * The count sheet the warehouse already uses on paper and in Excel: pick a location,
- * write the quantity found beside each item, post. Only lines that differ change stock.
+ * The count sheet the warehouse already uses on paper and in Excel: pick a location, or all
+ * of them one after another, write the quantity found beside each item, post. Only lines
+ * that differ change stock.
  */
 export function StockCountPage() {
   const { division } = useSession()
@@ -35,7 +39,7 @@ export function StockCountPage() {
 
   const lines = useMemo(() => {
     return (sheet.data?.lines ?? []).map((line) => {
-      const entry = entries[line.productId] ?? { counted: '', remark: '' }
+      const entry = entries[entryKey(line)] ?? { counted: '', remark: '' }
       const typed = entry.counted.trim()
       const valid = typed === '' || quantityText.safeParse(typed).success
       const difference = typed !== '' && valid ? Number(typed) - Number(line.expected) : null
@@ -47,8 +51,8 @@ export function StockCountPage() {
   const differing = counted.filter((l) => l.difference !== 0)
   const invalid = lines.filter((l) => !l.valid)
 
-  const set = (productId: string, change: Partial<Entry>) =>
-    setEntries((current) => ({ ...current, [productId]: { counted: '', remark: '', ...current[productId], ...change } }))
+  const set = (key: string, change: Partial<Entry>) =>
+    setEntries((current) => ({ ...current, [key]: { counted: '', remark: '', ...current[key], ...change } }))
 
   const chooseLocation = (id: string) => {
     setLocationId(id)
@@ -61,9 +65,8 @@ export function StockCountPage() {
       api<{ counted: number; changed: number }>('/stock/counts', {
         method: 'POST',
         body: {
-          locationId,
           idempotencyKey: key.current,
-          lines: counted.map((l) => ({ productId: l.productId, counted: l.typed, remark: l.remark.trim() || undefined })),
+          lines: counted.map((l) => ({ productId: l.productId, locationId: l.locationId, counted: l.typed, remark: l.remark.trim() || undefined })),
         },
       }),
     onSuccess: async (result) => {
@@ -76,6 +79,9 @@ export function StockCountPage() {
   })
 
   const location = sheet.data?.location
+  const all = locationId === 'all'
+  const activeLocations = locations.data?.rows.filter((l) => l.isActive) ?? []
+  const allItems = activeLocations.reduce((sum, l) => sum + l.itemCount, 0)
 
   return (
     <>
@@ -86,7 +92,12 @@ export function StockCountPage() {
           {(a) => (
             <Select {...a} value={locationId} onChange={(e) => chooseLocation(e.target.value)}>
               <option value="">Choose a location</option>
-              {locations.data?.rows.filter((l) => l.isActive).map((l) => (
+              {activeLocations.length > 1 ? (
+                <option value="all">
+                  All locations ({allItems} item{allItems === 1 ? '' : 's'})
+                </option>
+              ) : null}
+              {activeLocations.map((l) => (
                 <option key={l.id} value={l.id}>
                   {l.name} ({l.itemCount} item{l.itemCount === 1 ? '' : 's'})
                 </option>
@@ -106,7 +117,7 @@ export function StockCountPage() {
         <Loading />
       ) : lines.length === 0 ? (
         <div className="rounded-lg border border-line bg-surface px-4 py-10">
-          <EmptyState title="Nothing is recorded at this location">
+          <EmptyState title={all ? 'Nothing is recorded at any location' : 'Nothing is recorded at this location'}>
             To record an item found here, open the product in Inventory and use Adjust stock.
           </EmptyState>
         </div>
@@ -126,19 +137,28 @@ export function StockCountPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {lines.map((line) => (
-                    <tr key={line.productId} className="border-b border-line last:border-b-0">
+                  {lines.map((line, i) => (
+                    <Fragment key={entryKey(line)}>
+                    {all && line.locationId !== lines[i - 1]?.locationId ? (
+                      <tr className="border-b border-line bg-sunken">
+                        <th scope="rowgroup" colSpan={6} className="h-row px-3 text-left font-medium">
+                          {line.locationName}{' '}
+                          <span className="font-normal text-ink-2">({lines.filter((l) => l.locationId === line.locationId).length} items)</span>
+                        </th>
+                      </tr>
+                    ) : null}
+                    <tr className="border-b border-line last:border-b-0">
                       <td className="hidden px-3 whitespace-nowrap text-ink-2 sm:table-cell">{line.sku}</td>
                       <td className="px-3 py-1.5">
                         {line.name}
                         {line.difference ? (
                           <Input
-                            aria-label={`Remark for ${line.name}`}
+                            aria-label={`Remark for ${line.name}${all ? ` at ${line.locationName}` : ''}`}
                             placeholder="Remark"
                             className="mt-1 md:hidden"
                             maxLength={200}
                             value={line.remark}
-                            onChange={(e) => set(line.productId, { remark: e.target.value })}
+                            onChange={(e) => set(entryKey(line), { remark: e.target.value })}
                           />
                         ) : null}
                       </td>
@@ -146,11 +166,11 @@ export function StockCountPage() {
                       <td className="px-3 py-1">
                         <Input
                           inputMode="decimal"
-                          aria-label={`Counted ${UNIT_LABELS[line.unit].many} of ${line.name}`}
+                          aria-label={`Counted ${UNIT_LABELS[line.unit].many} of ${line.name}${all ? ` at ${line.locationName}` : ''}`}
                           aria-invalid={!line.valid}
                           className="h-7 text-right [@media(pointer:coarse)]:h-9"
                           value={line.counted}
-                          onChange={(e) => set(line.productId, { counted: e.target.value })}
+                          onChange={(e) => set(entryKey(line), { counted: e.target.value })}
                         />
                       </td>
                       <td className="num px-3">
@@ -169,14 +189,15 @@ export function StockCountPage() {
                       </td>
                       <td className="hidden px-3 py-1 md:table-cell">
                         <Input
-                          aria-label={`Remark for ${line.name}`}
+                          aria-label={`Remark for ${line.name}${all ? ` at ${line.locationName}` : ''}`}
                           className="h-7 [@media(pointer:coarse)]:h-9"
                           maxLength={200}
                           value={line.remark}
-                          onChange={(e) => set(line.productId, { remark: e.target.value })}
+                          onChange={(e) => set(entryKey(line), { remark: e.target.value })}
                         />
                       </td>
                     </tr>
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
@@ -232,8 +253,11 @@ export function StockCountPage() {
                 </thead>
                 <tbody>
                   {differing.map((l) => (
-                    <tr key={l.productId} className="border-b border-line last:border-b-0">
-                      <td className="px-3 py-1.5">{l.name}</td>
+                    <tr key={entryKey(l)} className="border-b border-line last:border-b-0">
+                      <td className="px-3 py-1.5">
+                        {l.name}
+                        {all ? <span className="block text-sm text-ink-2">{l.locationName}</span> : null}
+                      </td>
                       <td className="num px-3">{formatQuantity(l.expected)}</td>
                       <td className="num px-3">{formatQuantity(l.typed)}</td>
                       <td className={`num px-3 font-medium ${l.difference! < 0 ? 'text-danger' : 'text-ok'}`}>
