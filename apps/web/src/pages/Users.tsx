@@ -209,8 +209,8 @@ function ClearTestData() {
     <section className="mt-8 rounded-md border border-danger p-4">
       <h2 className="font-medium">Clear test data</h2>
       <p className="mt-1 text-ink-2">
-        Removes every sale, cash-up, receipt, damage report, contract, customer, supplier and selling price in both divisions, and puts stock back to the
-        opening count. Products, locations and users stay. Use it only before going live: it cannot be undone.
+        Removes every sale, cash-up, receipt, damage report, contract, customer, supplier and selling price in both divisions, removes every user except
+        the CEO, and puts stock back to the opening count. Products and locations stay. Use it only before going live: it cannot be undone.
       </p>
       <Button variant="danger" className="mt-3" onClick={() => setOpen(true)}>
         Clear test data
@@ -229,7 +229,7 @@ function ClearTestData() {
         }
       >
         <ErrorAlert error={clear.error} className="mb-3" />
-        <p className="mb-3">This cannot be undone. Both divisions go back to the opening stock with no sales, cash-ups or prices.</p>
+        <p className="mb-3">This cannot be undone. Both divisions go back to the opening stock with no sales, cash-ups or prices, and every account except the CEO's is removed.</p>
         <Field label={`Type ${CLEAR_PHRASE} to confirm`}>{(a) => <Input {...a} value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" />}</Field>
       </Dialog>
     </section>

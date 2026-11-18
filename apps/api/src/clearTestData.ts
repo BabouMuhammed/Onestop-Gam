@@ -29,6 +29,7 @@ export interface ClearResult {
   movementsRemoved: number
   openingMovementsKept: number
   pricesCleared: number
+  usersRemoved: number
 }
 
 const count = async (tx: { $queryRawUnsafe: typeof prisma.$queryRawUnsafe }, sql: string) =>
@@ -37,8 +38,8 @@ const count = async (tx: { $queryRawUnsafe: typeof prisma.$queryRawUnsafe }, sql
 /**
  * Put the system back to how it was right after the opening stock was loaded: every sale,
  * cash-up, receipt, damage, contract, customer, supplier and price is removed, and stock at
- * every location goes back to its opening count. Products, locations, users and the audit
- * log stay. Both divisions, in one transaction: it all happens or none of it does.
+ * every location goes back to its opening count, and every account except the CEO's is
+ * removed. Products, locations and the audit log stay. Both divisions, in one transaction: it all happens or none of it does.
  */
 export async function clearTestData(): Promise<ClearResult> {
   return prisma.$transaction(async (tx) => {
@@ -53,6 +54,7 @@ export async function clearTestData(): Promise<ClearResult> {
       movementsRemoved: await count(tx, `SELECT count(*) AS n FROM "StockMovement" WHERE "type" <> 'OPENING'`),
       openingMovementsKept: await count(tx, `SELECT count(*) AS n FROM "StockMovement" WHERE "type" = 'OPENING'`),
       pricesCleared: await count(tx, 'SELECT count(*) AS n FROM "Product" WHERE "sellingPrice" IS NOT NULL'),
+      usersRemoved: await count(tx, `SELECT count(*) AS n FROM "User" WHERE "role" <> 'CEO'`),
     }
 
     // The opening count is the only movement kept. Set it aside, empty the ledger with the
@@ -67,6 +69,9 @@ export async function clearTestData(): Promise<ClearResult> {
         (SELECT SUM(m."quantityDelta") FROM "StockMovement" m WHERE m."productId" = l."productId" AND m."locationId" = l."locationId"), 0),
         "updatedAt" = now()`)
     await tx.$executeRawUnsafe(`UPDATE "Product" SET "sellingPrice" = NULL, "costPrice" = NULL, "updatedAt" = now()`)
+    // Staff accounts made for the demo go too; their sessions and recovery codes cascade.
+    // The CEO stays to create the real accounts.
+    await tx.$executeRawUnsafe(`DELETE FROM "User" WHERE "role" <> 'CEO'`)
     return result
   }, { timeout: 120_000 })
 }
