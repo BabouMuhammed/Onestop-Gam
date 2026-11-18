@@ -108,3 +108,32 @@ describe('price approval', () => {
     await expect(prisma.priceChangeDecision.deleteMany()).rejects.toThrow()
   })
 })
+
+describe('removing a price', () => {
+  it('lets the CEO clear a price and records it in the audit log', async () => {
+    const ceo = await signIn('ceo', world.qf.id)
+    const res = await ceo.delete(`/api/products/${rice}/price`)
+    expect(res.status).toBe(200)
+    expect(res.body.product.sellingPrice).toBeNull()
+    expect(await priceOf(rice)).toBeNull()
+    const entry = await prisma.auditLog.findFirstOrThrow({ where: { action: 'product.price_removed' } })
+    expect(entry.summary).toContain('D 250.00')
+
+    // Nothing left to remove.
+    expect((await ceo.delete(`/api/products/${rice}/price`)).status).toBe(409)
+  })
+
+  it('refuses managers and cashiers', async () => {
+    expect((await (await signIn('qf.manager')).delete(`/api/products/${rice}/price`)).status).toBe(403)
+    expect(await priceOf(rice)).toBe('250')
+  })
+
+  it("stops a manager's waiting request from being approved afterwards", async () => {
+    const asked = await (await signIn('qf.manager')).put(`/api/products/${rice}/price`).send({ sellingPrice: '300' })
+    const ceo = await signIn('ceo', world.qf.id)
+    expect((await ceo.delete(`/api/products/${rice}/price`)).status).toBe(200)
+    const approved = await ceo.post(`/api/price-requests/${asked.body.request.id}/decision`).send(decide(true))
+    expect(approved.status).toBe(409)
+    expect(await priceOf(rice)).toBeNull()
+  })
+})

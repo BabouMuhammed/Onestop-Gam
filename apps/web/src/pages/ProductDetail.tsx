@@ -18,7 +18,7 @@ import { Alert, Button, ButtonLink, DataTable, Dialog, EmptyState, ErrorAlert, F
 export function ProductDetailPage() {
   const { id = '' } = useParams()
   const { can } = useSession()
-  const [dialog, setDialog] = useState<'edit' | 'price' | null>(null)
+  const [dialog, setDialog] = useState<'edit' | 'price' | 'remove-price' | null>(null)
   const detail = useQuery({ queryKey: ['product', id], queryFn: () => api<ProductDetail>(`/products/${id}`) })
 
   if (detail.isPending) return <Loading />
@@ -56,6 +56,7 @@ export function ProductDetailPage() {
           <>
             {can('product.manage') ? <Button onClick={() => setDialog('edit')}>Edit</Button> : null}
             {can('price.set') && !(detail.data.pendingPrice && !can('price.approve')) ? <Button onClick={() => setDialog('price')}>{product.sellingPrice === null ? 'Set price' : 'Change price'}</Button> : null}
+            {can('price.approve') && product.sellingPrice !== null ? <Button onClick={() => setDialog('remove-price')}>Remove price</Button> : null}
             {/* Stock only leaves through a damage report a manager approves, never a free-form edit. */}
             {can('damage.report') && product.isActive && Number(total) > 0 ? (
               <ButtonLink to={`/damages?report=${product.id}`}>Report damage</ButtonLink>
@@ -161,6 +162,9 @@ export function ProductDetailPage() {
       <Dialog open={dialog === 'price'} onClose={() => setDialog(null)} title={product.sellingPrice === null ? 'Set selling price' : 'Change selling price'}>
         <PriceForm detail={detail.data} onClose={() => setDialog(null)} />
       </Dialog>
+      <Dialog open={dialog === 'remove-price'} onClose={() => setDialog(null)} title="Remove selling price">
+        <RemovePrice detail={detail.data} onClose={() => setDialog(null)} />
+      </Dialog>
     </>
   )
 }
@@ -225,5 +229,34 @@ function PriceForm({ detail, onClose }: { detail: ProductDetail; onClose: () => 
         </Button>
       </div>
     </form>
+  )
+}
+
+function RemovePrice({ detail, onClose }: { detail: ProductDetail; onClose: () => void }) {
+  const { product } = detail
+  const refresh = useRefresh(product.id)
+  const notify = useNotify()
+  const remove = useMutation({
+    mutationFn: () => api(`/products/${product.id}/price`, { method: 'DELETE' }),
+    onSuccess: async () => {
+      await refresh()
+      notify('Price removed')
+      onClose()
+    },
+  })
+  return (
+    <div className="space-y-3">
+      <ErrorAlert error={remove.error} />
+      <p className="text-ink-2">
+        Remove the price of {product.name}
+        {product.sellingPrice !== null ? ` (${formatGMD(product.sellingPrice)})` : ''}? It will show as having no price until one is set again. This is recorded in the audit log.
+      </p>
+      <div className={dialogFooter}>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button variant="danger" busy={remove.isPending} onClick={() => remove.mutate()}>
+          Remove price
+        </Button>
+      </div>
+    </div>
   )
 }
