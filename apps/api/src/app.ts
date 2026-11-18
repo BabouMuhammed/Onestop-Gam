@@ -8,6 +8,7 @@ import { csrfGuard, requireAuth, requirePasswordChanged, requireTwoStepSetUp } f
 import { env } from './env'
 import { errorHandler, unknownRoute } from './http'
 import { auditRouter } from './routes/audit'
+import { clearTestDataRouter } from './routes/clearTestData'
 import { contractsRouter } from './routes/contracts'
 import { customersRouter } from './routes/customers'
 import { damagesRouter } from './routes/damages'
@@ -49,6 +50,7 @@ export function createApp() {
   api.use('/dashboard', dashboardRouter)
   api.use('/locations', locationsRouter)
   api.use('/opening-stock', openingStockRouter)
+  api.use('/admin/clear-test-data', clearTestDataRouter)
   api.use('/products', productsRouter)
   api.use('/price-requests', priceRequestsRouter)
   api.use('/stock', stockRouter)
