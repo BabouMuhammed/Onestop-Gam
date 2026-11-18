@@ -183,56 +183,7 @@ export function UsersPage() {
         {issued ? <IssuedPassword issued={issued} /> : null}
       </Dialog>
 
-      <ClearTestData />
     </>
-  )
-}
-
-const CLEAR_PHRASE = 'CLEAR TEST DATA'
-
-/** CEO only (this page is). Empties everything from testing so go-live starts from the opening count. */
-function ClearTestData() {
-  const [open, setOpen] = useState(false)
-  const [typed, setTyped] = useState('')
-  const queryClient = useQueryClient()
-  const notify = useNotify()
-  const clear = useMutation({
-    mutationFn: () => api<{ sales: number }>('/admin/clear-test-data', { method: 'POST', body: { confirm: CLEAR_PHRASE } }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries()
-      setOpen(false)
-      setTyped('')
-      notify('Test data cleared. Stock is back to the opening count.')
-    },
-  })
-  return (
-    <section className="mt-8 rounded-md border border-danger p-4">
-      <h2 className="font-medium">Clear test data</h2>
-      <p className="mt-1 text-ink-2">
-        Removes every sale, cash-up, receipt, damage report, contract, customer, supplier and selling price in both divisions, removes every user except
-        the CEO, empties the audit log, and puts stock back to the opening count. Products and locations stay. Use it only before going live: it cannot be undone.
-      </p>
-      <Button variant="danger" className="mt-3" onClick={() => setOpen(true)}>
-        Clear test data
-      </Button>
-      <Dialog
-        open={open}
-        onClose={() => setOpen(false)}
-        title="Clear test data"
-        footer={
-          <>
-            <Button onClick={() => setOpen(false)}>Cancel</Button>
-            <Button variant="danger" busy={clear.isPending} disabled={typed.trim() !== CLEAR_PHRASE} onClick={() => clear.mutate()}>
-              Clear everything
-            </Button>
-          </>
-        }
-      >
-        <ErrorAlert error={clear.error} className="mb-3" />
-        <p className="mb-3">This cannot be undone. Both divisions go back to the opening stock with no sales, cash-ups or prices, every account except the CEO's is removed, and the audit log is emptied.</p>
-        <Field label={`Type ${CLEAR_PHRASE} to confirm`}>{(a) => <Input {...a} value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" />}</Field>
-      </Dialog>
-    </section>
   )
 }
 
