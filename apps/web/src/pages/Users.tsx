@@ -183,7 +183,56 @@ export function UsersPage() {
         {issued ? <IssuedPassword issued={issued} /> : null}
       </Dialog>
 
+      <ZeroStock />
     </>
+  )
+}
+
+const ZERO_PHRASE = 'SET STOCK TO ZERO'
+
+/** CEO only (this page is), one-off: every quantity goes to 0 so managers can count it in again. */
+function ZeroStock() {
+  const [open, setOpen] = useState(false)
+  const [typed, setTyped] = useState('')
+  const queryClient = useQueryClient()
+  const notify = useNotify()
+  const zero = useMutation({
+    mutationFn: () => api<{ zeroed: number }>('/admin/zero-stock', { method: 'POST', body: { confirm: ZERO_PHRASE } }),
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries()
+      setOpen(false)
+      setTyped('')
+      notify(`Stock set to zero (${result.zeroed} quantities). Managers can now count it in.`)
+    },
+  })
+  return (
+    <section className="mt-8 rounded-md border border-danger p-4">
+      <h2 className="font-medium">Set all stock to zero</h2>
+      <p className="mt-1 text-ink-2">
+        Sets the quantity of every product at every location in both divisions to 0, so managers can enter the real quantities. Products, prices and
+        locations stay, and each change is recorded in the stock history.
+      </p>
+      <Button variant="danger" className="mt-3" onClick={() => setOpen(true)}>
+        Set all stock to zero
+      </Button>
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Set all stock to zero"
+        footer={
+          <>
+            <Button onClick={() => setOpen(false)}>Cancel</Button>
+            <Button variant="danger" busy={zero.isPending} disabled={typed.trim() !== ZERO_PHRASE} onClick={() => zero.mutate()}>
+              Set to zero
+            </Button>
+          </>
+        }
+      >
+        <ErrorAlert error={zero.error} className="mb-3" />
+        <p className="mb-3">Every quantity in both divisions becomes 0. The old figures stay in each product's stock history.</p>
+        <Field label={`Type ${ZERO_PHRASE} to confirm`}>{(a) => <Input {...a} value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" />}</Field>
+      </Dialog>
+    </section>
   )
 }
 

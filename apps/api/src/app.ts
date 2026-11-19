@@ -9,6 +9,7 @@ import { env } from './env'
 import { errorHandler, unknownRoute } from './http'
 import { auditRouter } from './routes/audit'
 import { contractsRouter } from './routes/contracts'
+import { zeroStockRouter } from './routes/zeroStock'
 import { customersRouter } from './routes/customers'
 import { damagesRouter } from './routes/damages'
 import { dashboardRouter } from './routes/dashboard'
@@ -49,6 +50,7 @@ export function createApp() {
   api.use('/dashboard', dashboardRouter)
   api.use('/locations', locationsRouter)
   api.use('/opening-stock', openingStockRouter)
+  api.use('/admin/zero-stock', zeroStockRouter)
   api.use('/products', productsRouter)
   api.use('/price-requests', priceRequestsRouter)
   api.use('/stock', stockRouter)

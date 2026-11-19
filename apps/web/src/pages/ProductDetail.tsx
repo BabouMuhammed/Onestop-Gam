@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link, useParams } from 'react-router'
 import {
@@ -10,15 +10,15 @@ import {
 import { api, ApiError } from '../api'
 import { MovementChange, movementColumns } from '../components/movements'
 import { ProductFormDialog } from '../components/ProductFormDialog'
-import { showFieldErrors } from '../forms'
+import { newIdempotencyKey, showFieldErrors } from '../forms'
 import { useSession } from '../session'
-import type { Movement, ProductDetail } from '../types'
-import { Alert, Button, ButtonLink, DataTable, Dialog, EmptyState, ErrorAlert, Field, Flag, Input, Loading, PageHeader, Section, useNotify, type Column } from '../ui'
+import type { LocationRow, Movement, ProductDetail } from '../types'
+import { Alert, Button, ButtonLink, DataTable, Dialog, EmptyState, ErrorAlert, Field, Flag, Input, Loading, Select, PageHeader, Section, useNotify, type Column } from '../ui'
 
 export function ProductDetailPage() {
   const { id = '' } = useParams()
   const { can } = useSession()
-  const [dialog, setDialog] = useState<'edit' | 'price' | 'remove-price' | null>(null)
+  const [dialog, setDialog] = useState<'edit' | 'price' | 'remove-price' | 'quantity' | null>(null)
   const detail = useQuery({ queryKey: ['product', id], queryFn: () => api<ProductDetail>(`/products/${id}`) })
 
   if (detail.isPending) return <Loading />
@@ -57,6 +57,7 @@ export function ProductDetailPage() {
             {can('product.manage') ? <Button onClick={() => setDialog('edit')}>Edit</Button> : null}
             {can('price.set') && !(detail.data.pendingPrice && !can('price.approve')) ? <Button onClick={() => setDialog('price')}>{product.sellingPrice === null ? 'Set price' : 'Change price'}</Button> : null}
             {can('price.approve') && product.sellingPrice !== null ? <Button onClick={() => setDialog('remove-price')}>Remove price</Button> : null}
+            {can('stock.count') ? <Button onClick={() => setDialog('quantity')}>Set quantity</Button> : null}
             {/* Stock only leaves through a damage report a manager approves, never a free-form edit. */}
             {can('damage.report') && product.isActive && Number(total) > 0 ? (
               <ButtonLink to={`/damages?report=${product.id}`}>Report damage</ButtonLink>
@@ -162,6 +163,9 @@ export function ProductDetailPage() {
       <Dialog open={dialog === 'price'} onClose={() => setDialog(null)} title={product.sellingPrice === null ? 'Set selling price' : 'Change selling price'}>
         <PriceForm detail={detail.data} onClose={() => setDialog(null)} />
       </Dialog>
+      <Dialog open={dialog === 'quantity'} onClose={() => setDialog(null)} title="Set quantity">
+        <QuantityForm detail={detail.data} onClose={() => setDialog(null)} />
+      </Dialog>
       <Dialog open={dialog === 'remove-price'} onClose={() => setDialog(null)} title="Remove selling price">
         <RemovePrice detail={detail.data} onClose={() => setDialog(null)} />
       </Dialog>
@@ -258,5 +262,68 @@ function RemovePrice({ detail, onClose }: { detail: ProductDetail; onClose: () =
         </Button>
       </div>
     </div>
+  )
+}
+
+/**
+ * Enter the quantity found at one location, as a one-line stock count: it replaces the
+ * system figure at once and is recorded with the person's name.
+ */
+function QuantityForm({ detail, onClose }: { detail: ProductDetail; onClose: () => void }) {
+  const { product, levels } = detail
+  const { division } = useSession()
+  const refresh = useRefresh(product.id)
+  const notify = useNotify()
+  const key = useRef(newIdempotencyKey())
+  const locations = useQuery({ queryKey: ['locations', division.id], queryFn: () => api<{ rows: LocationRow[] }>('/locations') })
+  const active = locations.data?.rows.filter((l) => l.isActive) ?? []
+  const [locationId, setLocationId] = useState(levels[0]?.locationId ?? '')
+  const [counted, setCounted] = useState('')
+  const [remark, setRemark] = useState('')
+  const current = levels.find((l) => l.locationId === locationId)?.quantity ?? '0'
+  const unit = UNIT_LABELS[product.unit]
+  const valid = locationId !== '' && /^\d+(\.\d{1,3})?$/.test(counted.trim())
+  const save = useMutation({
+    mutationFn: () =>
+      api<{ changed: number }>('/stock/counts', {
+        method: 'POST',
+        body: { locationId, idempotencyKey: key.current, lines: [{ productId: product.id, counted: counted.trim(), remark: remark.trim() || undefined }] },
+      }),
+    onSuccess: async (result) => {
+      await refresh()
+      notify(result.changed ? 'Quantity saved' : 'No change: that is already the quantity')
+      onClose()
+    },
+    onError: () => {
+      key.current = newIdempotencyKey()
+    },
+  })
+  return (
+    <form noValidate className="space-y-3" onSubmit={(e) => { e.preventDefault(); if (valid) save.mutate() }}>
+      <ErrorAlert error={save.error} />
+      <p className="text-ink-2">{product.name}</p>
+      <Field label="Location">
+        {(a) => (
+          <Select {...a} value={locationId} onChange={(e) => setLocationId(e.target.value)}>
+            <option value="">Choose a location</option>
+            {active.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.name} (now {levels.find((x) => x.locationId === l.id)?.quantity ?? '0'} {unit.many})
+              </option>
+            ))}
+          </Select>
+        )}
+      </Field>
+      <Field label={`Quantity found (${unit.many})`} hint={locationId ? `The system shows ${current}. What you enter replaces it and is recorded with your name.` : undefined}>
+        {(a) => <Input {...a} inputMode="decimal" autoFocus className="text-right" value={counted} onChange={(e) => setCounted(e.target.value)} />}
+      </Field>
+      <Field label="Remark (optional)">{(a) => <Input {...a} value={remark} onChange={(e) => setRemark(e.target.value)} />}</Field>
+      <div className={dialogFooter}>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button type="submit" variant="primary" busy={save.isPending} disabled={!valid}>
+          Save quantity
+        </Button>
+      </div>
+    </form>
   )
 }
