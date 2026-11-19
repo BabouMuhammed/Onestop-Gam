@@ -1,7 +1,8 @@
 import { Router } from 'express'
 import { z } from 'zod'
-import { listQuerySchema, stockCountSchema } from '@onestop/shared'
+import { listQuerySchema, stockCountSchema, UNIT_LABELS } from '@onestop/shared'
 import { audit } from '../audit'
+import { sendCsv, wantsCsv } from '../export'
 import { authOf, divisionOf, divisionsOf, requirePermission } from '../auth/guards'
 import { Decimal, prisma } from '../db'
 import { HttpError, notFound, parse } from '../http'
@@ -37,6 +38,17 @@ stockRouter.get('/count-sheet', requirePermission('stock.count'), async (req, re
         locationId: location.id, locationName: location.name,
       })),
   )
+  if (wantsCsv(req)) {
+    // A sheet to count against on paper or in Excel: the system figure, then blank columns to fill in.
+    await sendCsv(req, res, {
+      name: 'count-sheet',
+      what: `count-sheet lines for ${all ? 'all locations' : locations[0]!.name}`,
+      divisionId,
+      header: ['Location', 'SKU', 'Item', 'Unit', 'In system', 'Counted', 'Remark'],
+      rows: lines.map((l) => [l.locationName, l.sku, l.name, UNIT_LABELS[l.unit].many, l.expected.toString(), '', '']),
+    })
+    return
+  }
   res.json({ location: all ? { id: 'all', name: 'All locations' } : locations[0], lines })
 })
 

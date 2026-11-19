@@ -135,6 +135,24 @@ describe('counting all locations at once', () => {
     ])
   })
 
+  it('exports the all-locations sheet as CSV with blank columns to count into', async () => {
+    const manager = await signIn('qf.manager')
+    await prisma.stockLevel.createMany({
+      data: [
+        { productId: world.qf.product, locationId: world.qf.shelf, quantity: 10 },
+        { productId: world.qf.product, locationId: world.qf.fridge, quantity: 4 },
+      ],
+    })
+    const res = await manager.get('/api/stock/count-sheet?locationId=all&format=csv')
+    expect(res.status).toBe(200)
+    expect(res.headers['content-type']).toContain('text/csv')
+    const rows = res.text.replace(/^\uFEFF/, '').trim().split(/\r?\n/)
+    expect(rows[0]).toBe('Location,SKU,Item,Unit,In system,Counted,Remark')
+    expect(rows.slice(1).map((r) => r.split(',')[0])).toEqual(['Fridge', 'Shelf 1'])
+    expect(rows[1]).toMatch(/,4,,$/)
+    expect(await prisma.auditLog.count({ where: { action: 'export.count-sheet' } })).toBe(1)
+  })
+
   it('posts nothing when one line is wrong', async () => {
     const manager = await signIn('qf.manager')
     await prisma.stockLevel.create({ data: { productId: world.qf.product, locationId: world.qf.fridge, quantity: 4 } })
