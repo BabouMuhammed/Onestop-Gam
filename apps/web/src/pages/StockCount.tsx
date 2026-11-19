@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Fragment, useMemo, useRef, useState } from 'react'
 import { formatQuantity, formatQuantityWithUnit, quantityText, UNIT_LABELS } from '@onestop/shared'
 import { api, query } from '../api'
+import { ExportButton } from '../components/ExportButton'
 import { newIdempotencyKey } from '../forms'
 import { useSession } from '../session'
 import type { CountSheet, LocationRow } from '../types'
@@ -85,7 +86,11 @@ export function StockCountPage() {
 
   return (
     <>
-      <PageHeader title="Stock count" detail="Write the quantity found beside each item. Leave an item blank to skip it." />
+      <PageHeader
+        title="Stock count"
+        detail="Write the quantity found beside each item. Leave an item blank to skip it."
+        actions={locationId ? <ExportButton path={`/stock/count-sheet?locationId=${locationId}`} /> : null}
+      />
 
       <div className="mb-3 max-w-xs">
         <Field label="Location to count">
